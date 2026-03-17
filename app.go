@@ -310,7 +310,7 @@ func (a *App) getSNMPCommunity(credentialID string) (string, error) {
 		return "", err
 	}
 	if len(cred.SNMPCommunityEnc) == 0 {
-		return "public", nil
+		return "TICE", nil
 	}
 	return a.secretMgr.Decrypt(cred.SNMPCommunityEnc)
 }
@@ -327,7 +327,7 @@ type ScanRequest struct {
 }
 
 func (a *App) ScanNetwork(req ScanRequest) ([]models.Device, error) {
-	community := "public"
+	community := "TICE"
 	version := "v2c"
 
 	if req.CredentialID != "" {

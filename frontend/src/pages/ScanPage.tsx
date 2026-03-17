@@ -11,7 +11,7 @@ import { EventsOn } from '../../wailsjs/runtime/runtime'
 async function getBackend() { return import('../../wailsjs/go/main/App') }
 
 export default function ScanPage() {
-  const [cidr, setCidr] = useState('192.168.1.0/24')
+  const [cidr, setCidr] = useState('10.113.0.0/16')
   const [credId, setCredId] = useState('')
   const [workers, setWorkers] = useState('50')
   const [scanning, setScanning] = useState(false)
@@ -51,7 +51,7 @@ export default function ScanPage() {
   }
 
   const credOptions = [
-    { value: '', label: '— Community public (défaut) —' },
+    { value: '', label: '— Community TICE (défaut) —' },
     ...(credentials as any[]).map((c: any) => ({ value: c.id, label: c.name })),
   ]
 
