@@ -362,6 +362,7 @@ func (a *App) ScanNetwork(req ScanRequest) ([]models.Device, error) {
 		Version:   version,
 		Workers:   workers,
 		Timeout:   time.Duration(timeoutSec) * time.Second,
+		RateDelay: 50 * time.Millisecond, // 50ms between probes per worker — avoids SNMP rate-limiting on switches
 	}
 
 	results, err := snmp.Scan(ctx, params, func(ip string, done, total int) {

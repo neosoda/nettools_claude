@@ -20,6 +20,7 @@ type ScanParams struct {
 	Port        uint16
 	Timeout     time.Duration
 	Workers     int
+	RateDelay   time.Duration // delay between probes per worker (rate limiting)
 	// SNMPv3 fields
 	Username    string
 	AuthProto   string
@@ -65,10 +66,10 @@ func Scan(ctx context.Context, params ScanParams, progressCb func(ip string, don
 
 	workers := params.Workers
 	if workers <= 0 {
-		workers = 50
+		workers = 10 // conservative default to avoid SNMP rate-limiting on switches
 	}
-	if workers > 200 {
-		workers = 200
+	if workers > 50 {
+		workers = 50
 	}
 
 	jobs := make(chan string, len(ips))
@@ -86,6 +87,13 @@ func Scan(ctx context.Context, params ScanParams, progressCb func(ip string, don
 				default:
 					result := probeIP(ctx, ip, params)
 					results <- result
+					if params.RateDelay > 0 {
+						select {
+						case <-ctx.Done():
+							return
+						case <-time.After(params.RateDelay):
+						}
+					}
 				}
 			}
 		}()

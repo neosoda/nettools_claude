@@ -14,7 +14,7 @@ export default function ScanPage() {
   const [cidr, setCidr] = useState('10.113.0.0/24')
   const [community, setCommunity] = useState('TICE')
   const [credId, setCredId] = useState('')
-  const [workers, setWorkers] = useState('50')
+  const [workers, setWorkers] = useState('10')
   const [timeout, setTimeout] = useState('3')
   const [scanning, setScanning] = useState(false)
   const [progress, setProgress] = useState<{ ip: string; done: number; total: number; percent: number } | null>(null)
