@@ -1,9 +1,11 @@
 import { Routes, Route, NavLink } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import {
   Server, Network, DatabaseBackup, GitCompare, ShieldCheck,
-  Terminal, CalendarClock, GitGraph, ScrollText, Settings, Activity
+  Terminal, CalendarClock, GitGraph, ScrollText, Settings, Activity, Square
 } from 'lucide-react'
 import { cn } from './lib/utils'
+import { EventsOn } from '../wailsjs/runtime/runtime'
 
 import InventoryPage from './pages/InventoryPage'
 import ScanPage from './pages/ScanPage'
@@ -29,14 +31,36 @@ const navItems = [
   { to: '/settings', icon: Settings, label: 'Paramètres' },
 ]
 
+async function getBackend() { return import('../wailsjs/go/main/App') }
+
 export default function App() {
+  const [hasRunningTask, setHasRunningTask] = useState(false)
+  const [stopStatus, setStopStatus] = useState('')
+
+  useEffect(() => {
+    // Track scan state via events
+    const unsub1 = EventsOn('scan:progress', () => setHasRunningTask(true))
+    const unsub2 = EventsOn('scan:complete', () => setHasRunningTask(false))
+    const unsub3 = EventsOn('tasks:stopped', () => {
+      setHasRunningTask(false)
+      setStopStatus('Arrêté')
+      setTimeout(() => setStopStatus(''), 2000)
+    })
+    return () => { unsub1(); unsub2(); unsub3() }
+  }, [])
+
+  const handleStop = async () => {
+    const m = await getBackend()
+    await m.StopAllTasks()
+  }
+
   return (
     <div className="flex h-screen bg-slate-950">
       {/* Sidebar */}
       <nav className="flex flex-col w-[220px] bg-slate-900 border-r border-slate-800 shrink-0">
         {/* Logo */}
         <div className="flex items-center gap-2 px-4 h-14 border-b border-slate-800">
-          <Activity className="w-5 h-5 text-blue-400" />
+          <Activity className={cn("w-5 h-5", hasRunningTask ? "text-blue-400 animate-pulse" : "text-blue-400")} />
           <span className="font-semibold text-white text-sm">NetworkTools</span>
         </div>
 
@@ -62,9 +86,21 @@ export default function App() {
           ))}
         </div>
 
-        {/* Footer */}
-        <div className="px-4 py-3 border-t border-slate-800">
-          <p className="text-xs text-slate-600">v1.0.0</p>
+        {/* Footer with Stop button */}
+        <div className="px-3 py-3 border-t border-slate-800 space-y-2">
+          {hasRunningTask && (
+            <button
+              onClick={handleStop}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-600/20 border border-red-600/50 text-red-400 text-xs font-medium hover:bg-red-600/30 transition-colors"
+            >
+              <Square className="w-3.5 h-3.5" />
+              Arrêter les tâches
+            </button>
+          )}
+          {stopStatus && (
+            <p className="text-xs text-center text-green-400">{stopStatus}</p>
+          )}
+          <p className="text-xs text-slate-600 text-center">v1.1.0</p>
         </div>
       </nav>
 

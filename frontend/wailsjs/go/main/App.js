@@ -34,6 +34,10 @@ export function ExportBackupsZip(arg1) {
   return window['go']['main']['App']['ExportBackupsZip'](arg1);
 }
 
+export function ExportScanToExcel(arg1) {
+  return window['go']['main']['App']['ExportScanToExcel'](arg1);
+}
+
 export function GetAuditLogs(arg1) {
   return window['go']['main']['App']['GetAuditLogs'](arg1);
 }
@@ -60,6 +64,18 @@ export function GetDevice(arg1) {
 
 export function GetDevices() {
   return window['go']['main']['App']['GetDevices']();
+}
+
+export function GetLastScanDevices() {
+  return window['go']['main']['App']['GetLastScanDevices']();
+}
+
+export function GetLogFileContent(arg1) {
+  return window['go']['main']['App']['GetLogFileContent'](arg1);
+}
+
+export function GetLogFiles() {
+  return window['go']['main']['App']['GetLogFiles']();
 }
 
 export function GetPlaybooks() {
@@ -94,6 +110,10 @@ export function RunSSHCommands(arg1) {
   return window['go']['main']['App']['RunSSHCommands'](arg1);
 }
 
+export function RunTerminalCommand(arg1, arg2) {
+  return window['go']['main']['App']['RunTerminalCommand'](arg1, arg2);
+}
+
 export function SaveAuditRule(arg1) {
   return window['go']['main']['App']['SaveAuditRule'](arg1);
 }
@@ -120,6 +140,10 @@ export function SaveSettings(arg1) {
 
 export function ScanNetwork(arg1) {
   return window['go']['main']['App']['ScanNetwork'](arg1);
+}
+
+export function StopAllTasks() {
+  return window['go']['main']['App']['StopAllTasks']();
 }
 
 export function TestDeviceConnection(arg1) {

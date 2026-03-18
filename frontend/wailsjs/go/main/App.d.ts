@@ -24,6 +24,8 @@ export function DeleteScheduledJob(arg1:string):Promise<void>;
 
 export function ExportBackupsZip(arg1:Array<string>):Promise<string>;
 
+export function ExportScanToExcel(arg1:Array<string>):Promise<string>;
+
 export function GetAuditLogs(arg1:main.AuditLogQuery):Promise<Array<models.AuditLog>>;
 
 export function GetAuditRules():Promise<Array<models.AuditRule>>;
@@ -37,6 +39,12 @@ export function GetCredentials():Promise<Array<models.CredentialView>>;
 export function GetDevice(arg1:string):Promise<models.Device>;
 
 export function GetDevices():Promise<Array<models.Device>>;
+
+export function GetLastScanDevices():Promise<Array<models.Device>>;
+
+export function GetLogFileContent(arg1:string):Promise<string>;
+
+export function GetLogFiles():Promise<Array<string>>;
 
 export function GetPlaybooks():Promise<Array<models.Playbook>>;
 
@@ -54,6 +62,8 @@ export function RunPlaybook(arg1:main.PlaybookRunRequest):Promise<Array<playbook
 
 export function RunSSHCommands(arg1:main.SSHCommandRequest):Promise<Array<ssh.Result>>;
 
+export function RunTerminalCommand(arg1:string,arg2:string):Promise<string>;
+
 export function SaveAuditRule(arg1:models.AuditRule):Promise<models.AuditRule>;
 
 export function SaveCredential(arg1:main.CredentialInput):Promise<models.CredentialView>;
@@ -67,6 +77,8 @@ export function SaveScheduledJob(arg1:models.ScheduledJob):Promise<models.Schedu
 export function SaveSettings(arg1:main.AppSettings):Promise<void>;
 
 export function ScanNetwork(arg1:main.ScanRequest):Promise<Array<models.Device>>;
+
+export function StopAllTasks():Promise<string>;
 
 export function TestDeviceConnection(arg1:string):Promise<Record<string, any>>;
 

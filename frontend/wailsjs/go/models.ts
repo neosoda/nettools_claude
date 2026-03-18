@@ -259,6 +259,7 @@ export namespace main {
 	}
 	export class ScanRequest {
 	    cidr: string;
+	    ip_list: string[];
 	    community: string;
 	    credential_id: string;
 	    workers: number;
@@ -271,6 +272,7 @@ export namespace main {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.cidr = source["cidr"];
+	        this.ip_list = source["ip_list"];
 	        this.community = source["community"];
 	        this.credential_id = source["credential_id"];
 	        this.workers = source["workers"];

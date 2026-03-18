@@ -1,19 +1,140 @@
-# README
+# NetworkTools
 
-## About
+Application desktop de gestion réseau pour administrateurs, construite avec **Wails v2 + Go + React + SQLite**.
 
-This is the official Wails React-TS template.
+---
 
-You can configure the project by editing `wails.json`. More information about the project settings can be found
-here: https://wails.io/docs/reference/project-config
+## Fonctionnalités
 
-## Live Development
+### Découverte réseau (SNMP)
+- Scan SNMP v2c/v3 par plage CIDR
+- **Saisie manuelle d'une liste d'IPs** (une par ligne ou séparées par virgule)
+- Collecte : hostname, MAC address, fabricant, modèle, **version firmware**, **uptime**
+- Diagnostic IP individuel avec fallback v2c → v1 → public
+- Progression en temps réel
+- **Bouton STOP** — arrête immédiatement le scan en cours
+- **Export Excel (.xlsx)** avec mise en forme : en-têtes colorés, lignes alternées, feuille résumé par fabricant
 
-To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
-server that will provide very fast hot reload of your frontend changes. If you want to develop in a browser
-and have access to your Go methods, there is also a dev server that runs on http://localhost:34115. Connect
-to this in your browser, and you can call your Go code from devtools.
+### Gestion des backups
+- Backup SSH des configurations `running` / `startup`
+- Sélection par équipement ou **depuis le dernier scan**
+- Indicateurs de progression par équipement (succès / échec en direct)
+- **Fenêtre Terminal SSH** — exécutez n'importe quelle commande interactive sur l'équipement, avec suggestions rapides (`show version`, `show vlan`, etc.)
+- Historique : date, taille, hash SHA256, durée
+- Visualisation et export ZIP des backups
 
-## Building
+### Audit de conformité
+- Règles regex configurables (présence / absence)
+- Sévérités : critique, élevé, moyen, faible
+- Filtrage par fabricant
+- Sélection **depuis le dernier scan**
+- Score en pourcentage avec barre de progression colorée
 
-To build a redistributable, production mode package, use `wails build`.
+### Comparateur de configuration
+- Diff ligne par ligne avec indicateurs +/-
+- Ignorer des patterns (regex)
+- Comparaison directe entre deux backups
+
+### Playbooks SSH
+- Définition en YAML : nom, timeout, étapes (commande + expect + on_error)
+- **Guide intégré** : explication, structure, bonnes pratiques
+- **4 modèles prêts à l'emploi** : inventaire, sécurité, VLAN, diagnostic
+- Exécution multi-équipements avec résultats pas-à-pas
+
+### Planificateur
+- Interface **calendrier + horloge** : fréquence (horaire / quotidien / hebdo / mensuel) + heure + minute
+- Aperçu en français de la planification
+- Mode avancé pour expressions cron personnalisées
+- Types de tâches : Backup, Scan réseau
+- Activation/désactivation à la volée
+
+### Journaux d'activité
+- Événements cliquables avec **modal de détail** et analyse contextuelle
+- Filtrage texte (action, type, détails)
+- **Lecteur de fichiers journaux** — parcourez les `.log` mensuels directement dans l'app
+- Auto-rafraîchissement toutes les 10 secondes
+
+### Inventaire
+- Gestion CRUD des équipements
+- Test de connexion SSH
+- Assignation de credentials par équipement
+
+### Topologie réseau
+- Visualisation graphe (ReactFlow)
+- Couleurs par fabricant, icône PoE
+
+---
+
+## Stack technique
+
+| Couche | Technologie |
+|---|---|
+| Framework desktop | Wails v2 |
+| Backend | Go 1.25 |
+| Frontend | React 18 + TypeScript + TailwindCSS |
+| Base de données | SQLite (GORM, mode WAL) |
+| SNMP | gosnmp |
+| SSH | golang.org/x/crypto/ssh |
+| Export Excel | excelize v2 |
+| Scheduler | robfig/cron v3 |
+| Chiffrement | DPAPI (Windows) / AES-256-GCM |
+| Logs | zerolog |
+
+---
+
+## Architecture
+
+```
+networktools/
+├── app.go                    # API principale (méthodes Wails)
+├── main.go                   # Point d'entrée
+├── internal/
+│   ├── db/                   # SQLite + modèles GORM
+│   ├── snmp/                 # Scanner réseau + mapping OID→modèle
+│   ├── backup/               # Gestionnaire de backups SSH
+│   ├── playbook/             # Exécuteur de playbooks YAML
+│   ├── scheduler/            # Planificateur cron
+│   ├── audit/                # Moteur de conformité
+│   ├── diff/                 # Comparateur de configurations
+│   ├── ssh/                  # Pool de workers SSH
+│   ├── topology/             # Constructeur de graphe
+│   ├── logger/               # Logs fichier + base de données
+│   └── secret/               # Chiffrement credentials
+├── frontend/
+│   └── src/pages/            # Pages React
+└── build/bin/
+    └── Nettools_claude.exe   # Binaire Windows
+```
+
+---
+
+## Données
+
+Stockées dans `%APPDATA%\NetworkTools\` :
+- `networktools.db` — base SQLite
+- `backups/` — fichiers de configuration
+- `logs/networktools-YYYY-MM.log` — journaux mensuels
+- `settings.json` — préférences utilisateur
+
+---
+
+## Développement
+
+```bash
+# Mode développement (hot-reload)
+wails dev
+
+# Build production
+wails build
+```
+
+Binaire produit : `build/bin/Nettools_claude.exe`
+
+---
+
+## Prérequis build
+
+- Go 1.21+
+- Node.js 18+
+- Wails CLI v2 : `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
+- WebView2 Runtime (inclus dans Windows 10/11)

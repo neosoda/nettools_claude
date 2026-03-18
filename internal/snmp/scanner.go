@@ -15,6 +15,7 @@ import (
 // ScanParams defines the parameters for a network scan
 type ScanParams struct {
 	CIDR        string
+	IPs         []string      // explicit IP list (alternative to CIDR)
 	Community   string
 	Version     string // "v2c" | "v3"
 	Port        uint16
@@ -59,9 +60,24 @@ var oidNames = map[string]string{
 }
 
 func Scan(ctx context.Context, params ScanParams, progressCb func(ip string, done, total int)) ([]ScanResult, error) {
-	ips, err := cidrToIPs(params.CIDR)
-	if err != nil {
-		return nil, fmt.Errorf("invalid CIDR %s: %w", params.CIDR, err)
+	var ips []string
+	var err error
+
+	if len(params.IPs) > 0 {
+		// Use explicit IP list, deduplicate
+		seen := map[string]bool{}
+		for _, ip := range params.IPs {
+			ip = strings.TrimSpace(ip)
+			if ip != "" && !seen[ip] {
+				ips = append(ips, ip)
+				seen[ip] = true
+			}
+		}
+	} else {
+		ips, err = cidrToIPs(params.CIDR)
+		if err != nil {
+			return nil, fmt.Errorf("invalid CIDR %s: %w", params.CIDR, err)
+		}
 	}
 
 	workers := params.Workers

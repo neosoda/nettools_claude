@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"networktools/internal/audit"
@@ -23,6 +26,7 @@ import (
 	"networktools/internal/topology"
 
 	"github.com/google/uuid"
+	"github.com/xuri/excelize/v2"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"gorm.io/gorm"
 )
@@ -35,6 +39,10 @@ type App struct {
 	backupMgr   *backup.Manager
 	auditEngine *audit.Engine
 	sched       *scheduler.Scheduler
+
+	mu          sync.Mutex
+	scanCancel  context.CancelFunc // cancel running scan
+	lastScanIDs []string           // device IDs from last scan
 }
 
 func NewApp() *App {
@@ -81,7 +89,7 @@ func (a *App) startup(ctx context.Context) {
 	})
 	a.sched.Start(ctx)
 
-	logger.Info("NetworkTools started")
+	logger.Info("NetworkTools démarré")
 }
 
 func (a *App) shutdown(ctx context.Context) {
@@ -89,6 +97,24 @@ func (a *App) shutdown(ctx context.Context) {
 		a.sched.Stop()
 	}
 	logger.Close()
+}
+
+// ─────────────────────────────────────────────
+// STOP ALL TASKS
+// ─────────────────────────────────────────────
+
+// StopAllTasks cancels any running scan or background task
+func (a *App) StopAllTasks() string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.scanCancel != nil {
+		a.scanCancel()
+		a.scanCancel = nil
+		runtime.EventsEmit(a.ctx, "tasks:stopped", map[string]interface{}{"message": "Tâches arrêtées"})
+		logger.Info("Toutes les tâches ont été arrêtées par l'utilisateur")
+		return "stopped"
+	}
+	return "nothing_running"
 }
 
 // ─────────────────────────────────────────────
@@ -322,11 +348,12 @@ func (a *App) getSNMPCommunity(credentialID string) (string, error) {
 
 // ScanRequest is the input for a network scan
 type ScanRequest struct {
-	CIDR         string `json:"cidr"`
-	Community    string `json:"community"`
-	CredentialID string `json:"credential_id"`
-	Workers      int    `json:"workers"`
-	TimeoutSec   int    `json:"timeout_sec"`
+	CIDR         string   `json:"cidr"`
+	IPList       []string `json:"ip_list"`    // Manual list of IPs (alternative to CIDR)
+	Community    string   `json:"community"`
+	CredentialID string   `json:"credential_id"`
+	Workers      int      `json:"workers"`
+	TimeoutSec   int      `json:"timeout_sec"`
 }
 
 func (a *App) ScanNetwork(req ScanRequest) ([]models.Device, error) {
@@ -343,8 +370,21 @@ func (a *App) ScanNetwork(req ScanRequest) ([]models.Device, error) {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(a.ctx, 5*time.Minute)
-	defer cancel()
+	// Cancel any existing scan and create new cancellable context
+	a.mu.Lock()
+	if a.scanCancel != nil {
+		a.scanCancel()
+	}
+	ctx, cancel := context.WithTimeout(a.ctx, 10*time.Minute)
+	a.scanCancel = cancel
+	a.mu.Unlock()
+
+	defer func() {
+		a.mu.Lock()
+		a.scanCancel = nil
+		a.mu.Unlock()
+		cancel()
+	}()
 
 	workers := req.Workers
 	if workers <= 0 {
@@ -358,13 +398,15 @@ func (a *App) ScanNetwork(req ScanRequest) ([]models.Device, error) {
 
 	params := snmp.ScanParams{
 		CIDR:      req.CIDR,
+		IPs:       req.IPList,
 		Community: community,
 		Version:   version,
 		Workers:   workers,
 		Timeout:   time.Duration(timeoutSec) * time.Second,
-		RateDelay: 50 * time.Millisecond, // 50ms between probes per worker — avoids SNMP rate-limiting on switches
+		RateDelay: 50 * time.Millisecond,
 	}
 
+	start := time.Now()
 	results, err := snmp.Scan(ctx, params, func(ip string, done, total int) {
 		pct := 0
 		if total > 0 {
@@ -378,11 +420,14 @@ func (a *App) ScanNetwork(req ScanRequest) ([]models.Device, error) {
 		})
 	})
 	if err != nil {
+		logger.AuditAction(a.ctx, "network_scan", "scan", req.CIDR,
+			fmt.Sprintf(`{"error":"%s"}`, err.Error()), "failed", time.Since(start).Milliseconds())
 		return nil, err
 	}
 
 	// Persist discovered devices
 	var discovered []models.Device
+	var discoveredIDs []string
 	for _, r := range results {
 		if !r.Reachable {
 			continue
@@ -396,23 +441,56 @@ func (a *App) ScanNetwork(req ScanRequest) ([]models.Device, error) {
 		if dbErr == gorm.ErrRecordNotFound {
 			db.DB.Create(&device)
 			discovered = append(discovered, device)
+			discoveredIDs = append(discoveredIDs, device.ID)
 		} else {
 			existing.Hostname = device.Hostname
 			existing.Description = device.Description
 			existing.Vendor = device.Vendor
 			existing.Model = device.Model
 			existing.Location = device.Location
+			existing.MACAddress = device.MACAddress
+			existing.OSVersion = device.OSVersion
+			existing.UptimeSeconds = device.UptimeSeconds
 			existing.LastSeenAt = &now
 			db.DB.Save(&existing)
 			discovered = append(discovered, existing)
+			discoveredIDs = append(discoveredIDs, existing.ID)
 		}
 	}
 
-	logger.AuditAction(a.ctx, "network_scan", "scan", req.CIDR,
-		fmt.Sprintf(`{"found":%d}`, len(discovered)), "success", 0)
-	runtime.EventsEmit(a.ctx, "scan:complete", map[string]interface{}{"found": len(discovered)})
+	// Save last scan device IDs
+	a.mu.Lock()
+	a.lastScanIDs = discoveredIDs
+	a.mu.Unlock()
+
+	scanTarget := req.CIDR
+	if len(req.IPList) > 0 {
+		scanTarget = fmt.Sprintf("%d IPs manuelles", len(req.IPList))
+	}
+	logger.AuditAction(a.ctx, "network_scan", "scan", scanTarget,
+		fmt.Sprintf(`{"found":%d,"duration_ms":%d}`, len(discovered), time.Since(start).Milliseconds()),
+		"success", time.Since(start).Milliseconds())
+	runtime.EventsEmit(a.ctx, "scan:complete", map[string]interface{}{
+		"found":    len(discovered),
+		"duration": time.Since(start).Milliseconds(),
+	})
 
 	return discovered, nil
+}
+
+// GetLastScanDevices returns devices discovered during the last scan
+func (a *App) GetLastScanDevices() []models.Device {
+	a.mu.Lock()
+	ids := make([]string, len(a.lastScanIDs))
+	copy(ids, a.lastScanIDs)
+	a.mu.Unlock()
+
+	if len(ids) == 0 {
+		return []models.Device{}
+	}
+	var devices []models.Device
+	db.DB.Where("id IN ?", ids).Order("hostname, ip").Find(&devices)
+	return devices
 }
 
 // SNMPTestResult is the result of a single-IP SNMP test
@@ -430,8 +508,6 @@ func (a *App) TestSNMPHost(ip, community, version string, timeoutSec int) SNMPTe
 	if timeoutSec <= 0 {
 		timeoutSec = 5
 	}
-	// Use ProbeIPWithFallback: tries community v2c → v1 → public v1.
-	// Does NOT go through the mass scanner to avoid flooding the network.
 	r := snmp.ProbeIPWithFallback(ip, 161, community, timeoutSec, snmp.ScanParams{})
 	errStr := ""
 	if r.Error != nil {
@@ -445,12 +521,55 @@ func (a *App) TestSNMPHost(ip, community, version string, timeoutSec int) SNMPTe
 	}
 }
 
+var firmwareRe = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)Version\s+([0-9][^\s,;]+)`),
+	regexp.MustCompile(`(?i)revision\s+([A-Z0-9][^\s,;]+)`),
+	regexp.MustCompile(`(?i)SW:\s*([^\s,;]+)`),
+	regexp.MustCompile(`(?i)firmware[:\s]+([^\s,;]+)`),
+}
+
+func parseFirmwareFromDescr(descr string) string {
+	for _, re := range firmwareRe {
+		if m := re.FindStringSubmatch(descr); len(m) > 1 {
+			return m[1]
+		}
+	}
+	return ""
+}
+
+func formatUptime(ticks uint64) string {
+	totalSec := ticks / 100
+	days := totalSec / 86400
+	hours := (totalSec % 86400) / 3600
+	minutes := (totalSec % 3600) / 60
+	if days > 0 {
+		return fmt.Sprintf("%dj %dh%02dm", days, hours, minutes)
+	}
+	return fmt.Sprintf("%dh%02dm", hours, minutes)
+}
+
 func (a *App) resultToDevice(r snmp.ScanResult, credID, snmpVersion string) models.Device {
 	hostname := strings.TrimSpace(r.Data["sysName"])
 	description := strings.TrimSpace(r.Data["sysDescr"])
 	location := strings.TrimSpace(r.Data["sysLocation"])
 	sysObjectID := strings.TrimSpace(r.Data["sysObjectID"])
 	mac := strings.TrimSpace(r.Data["sysMACAddress"])
+
+	// Uptime from TimeTicks (hundredths of seconds)
+	var uptimeSec int64
+	if uptimeStr, ok := r.Data["sysUpTime"]; ok && uptimeStr != "" {
+		if ticks, err := strconv.ParseUint(uptimeStr, 10, 64); err == nil {
+			uptimeSec = int64(ticks / 100)
+		}
+	}
+
+	// Firmware version: try SNMP-provided first, then parse from sysDescr
+	firmware := ""
+	if fw, ok := r.Data["firmware"]; ok && fw != "" {
+		firmware = fw
+	} else {
+		firmware = parseFirmwareFromDescr(description)
+	}
 
 	// Use actual version that responded (may differ from requested)
 	if v, ok := r.Data["_version"]; ok && v != "" {
@@ -471,19 +590,198 @@ func (a *App) resultToDevice(r snmp.ScanResult, credID, snmpVersion string) mode
 	}
 
 	return models.Device{
-		ID:           uuid.NewString(),
-		IP:           r.IP,
-		Hostname:     hostname,
-		Description:  description,
-		Location:     location,
-		Vendor:       vendor,
-		Model:        model,
-		MACAddress:   mac,
-		SNMPVersion:  snmpVersion,
-		SNMPPort:     161,
-		SSHPort:      22,
-		CredentialID: credID,
+		ID:            uuid.NewString(),
+		IP:            r.IP,
+		Hostname:      hostname,
+		Description:   description,
+		Location:      location,
+		Vendor:        vendor,
+		Model:         model,
+		MACAddress:    mac,
+		OSVersion:     firmware,
+		UptimeSeconds: uptimeSec,
+		SNMPVersion:   snmpVersion,
+		SNMPPort:      161,
+		SSHPort:       22,
+		CredentialID:  credID,
 	}
+}
+
+// ExportScanToExcel exports scan results to an Excel file
+func (a *App) ExportScanToExcel(deviceIDs []string) (string, error) {
+	destPath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "Exporter le scan vers Excel",
+		DefaultFilename: fmt.Sprintf("scan_%s.xlsx", time.Now().Format("20060102_150405")),
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Fichier Excel (*.xlsx)", Pattern: "*.xlsx"},
+		},
+	})
+	if err != nil || destPath == "" {
+		return "", err
+	}
+
+	var devices []models.Device
+	if len(deviceIDs) > 0 {
+		db.DB.Where("id IN ?", deviceIDs).Order("ip").Find(&devices)
+	} else {
+		db.DB.Order("ip").Find(&devices)
+	}
+
+	f := excelize.NewFile()
+	defer f.Close()
+
+	sheet := "Scan réseau"
+	f.SetSheetName("Sheet1", sheet)
+
+	// Styles
+	headerStyle, _ := f.NewStyle(&excelize.Style{
+		Font:      &excelize.Font{Bold: true, Color: "FFFFFF", Size: 11},
+		Fill:      excelize.Fill{Type: "pattern", Color: []string{"1E3A5F"}, Pattern: 1},
+		Alignment: &excelize.Alignment{Horizontal: "center", Vertical: "center", WrapText: false},
+		Border: []excelize.Border{
+			{Type: "bottom", Color: "4472C4", Style: 2},
+		},
+	})
+	evenStyle, _ := f.NewStyle(&excelize.Style{
+		Fill: excelize.Fill{Type: "pattern", Color: []string{"EBF0FA"}, Pattern: 1},
+		Font: &excelize.Font{Size: 10},
+		Border: []excelize.Border{
+			{Type: "left", Color: "D0D8EC", Style: 1},
+			{Type: "right", Color: "D0D8EC", Style: 1},
+		},
+	})
+	oddStyle, _ := f.NewStyle(&excelize.Style{
+		Fill: excelize.Fill{Type: "pattern", Color: []string{"FFFFFF"}, Pattern: 1},
+		Font: &excelize.Font{Size: 10},
+		Border: []excelize.Border{
+			{Type: "left", Color: "D0D8EC", Style: 1},
+			{Type: "right", Color: "D0D8EC", Style: 1},
+		},
+	})
+	ipStyle, _ := f.NewStyle(&excelize.Style{
+		Font:      &excelize.Font{Bold: true, Color: "1F4E79", Size: 10, Family: "Courier New"},
+		Alignment: &excelize.Alignment{Horizontal: "left"},
+	})
+
+	// Headers
+	headers := []string{"#", "Adresse IP", "Hostname", "Adresse MAC", "Fabricant", "Modèle", "Version Firmware", "Uptime", "Location", "Découvert le"}
+	for i, h := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		f.SetCellValue(sheet, cell, h)
+		f.SetCellStyle(sheet, cell, cell, headerStyle)
+	}
+
+	// Column widths
+	colWidths := []float64{5, 16, 22, 20, 14, 18, 18, 12, 22, 22}
+	cols := []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J"}
+	for i, col := range cols {
+		f.SetColWidth(sheet, col, col, colWidths[i])
+	}
+	f.SetRowHeight(sheet, 1, 22)
+
+	// Data rows
+	for i, d := range devices {
+		row := i + 2
+		style := oddStyle
+		if i%2 == 0 {
+			style = evenStyle
+		}
+
+		uptime := ""
+		if d.UptimeSeconds > 0 {
+			days := d.UptimeSeconds / 86400
+			hours := (d.UptimeSeconds % 86400) / 3600
+			minutes := (d.UptimeSeconds % 3600) / 60
+			if days > 0 {
+				uptime = fmt.Sprintf("%dj %dh%02dm", days, hours, minutes)
+			} else {
+				uptime = fmt.Sprintf("%dh%02dm", hours, minutes)
+			}
+		}
+
+		lastSeen := ""
+		if d.LastSeenAt != nil {
+			lastSeen = d.LastSeenAt.Format("02/01/2006 15:04")
+		}
+
+		values := []interface{}{
+			i + 1,
+			d.IP,
+			d.Hostname,
+			d.MACAddress,
+			d.Vendor,
+			d.Model,
+			d.OSVersion,
+			uptime,
+			d.Location,
+			lastSeen,
+		}
+
+		for j, v := range values {
+			cell, _ := excelize.CoordinatesToCellName(j+1, row)
+			f.SetCellValue(sheet, cell, v)
+			if j == 1 { // IP column
+				f.SetCellStyle(sheet, cell, cell, ipStyle)
+			} else {
+				f.SetCellStyle(sheet, cell, cell, style)
+			}
+		}
+		f.SetRowHeight(sheet, row, 18)
+	}
+
+	// Freeze header row
+	f.SetPanes(sheet, &excelize.Panes{
+		Freeze:      true,
+		Split:       false,
+		XSplit:      0,
+		YSplit:      1,
+		TopLeftCell: "A2",
+		ActivePane:  "bottomLeft",
+	})
+
+	// Summary sheet
+	summarySheet := "Résumé"
+	f.NewSheet(summarySheet)
+	summaryStyle, _ := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{Bold: true, Size: 12},
+	})
+	f.SetCellValue(summarySheet, "A1", "Rapport de scan réseau")
+	f.SetCellStyle(summarySheet, "A1", "A1", summaryStyle)
+	f.SetCellValue(summarySheet, "A3", "Date d'exportation")
+	f.SetCellValue(summarySheet, "B3", time.Now().Format("02/01/2006 15:04:05"))
+	f.SetCellValue(summarySheet, "A4", "Total équipements")
+	f.SetCellValue(summarySheet, "B4", len(devices))
+
+	// Count vendors
+	vendorCount := map[string]int{}
+	for _, d := range devices {
+		v := d.Vendor
+		if v == "" {
+			v = "inconnu"
+		}
+		vendorCount[v]++
+	}
+	row := 6
+	f.SetCellValue(summarySheet, "A5", "Fabricant")
+	f.SetCellValue(summarySheet, "B5", "Nombre")
+	for vendor, count := range vendorCount {
+		f.SetCellValue(summarySheet, fmt.Sprintf("A%d", row), vendor)
+		f.SetCellValue(summarySheet, fmt.Sprintf("B%d", row), count)
+		row++
+	}
+	f.SetColWidth(summarySheet, "A", "A", 25)
+	f.SetColWidth(summarySheet, "B", "B", 15)
+
+	f.SetActiveSheet(0)
+
+	if err := f.SaveAs(destPath); err != nil {
+		return "", fmt.Errorf("save excel: %w", err)
+	}
+
+	logger.AuditAction(a.ctx, "export_excel", "scan", destPath,
+		fmt.Sprintf(`{"devices":%d}`, len(devices)), "success", 0)
+
+	return destPath, nil
 }
 
 // ─────────────────────────────────────────────
@@ -502,14 +800,29 @@ func (a *App) RunBackup(req BackupRequest) ([]models.Backup, error) {
 	for _, deviceID := range req.DeviceIDs {
 		var device models.Device
 		if err := db.DB.First(&device, "id = ?", deviceID).Error; err != nil {
+			logger.Error(fmt.Sprintf("device not found: %s", deviceID), err)
 			continue
+		}
+
+		// Ensure SSH port is set
+		if device.SSHPort == 0 {
+			device.SSHPort = 22
 		}
 
 		username, password, privateKey, err := a.getCredentials(device.CredentialID)
 		if err != nil {
+			errMsg := fmt.Sprintf("credentials manquants pour %s: %v", device.IP, err)
+			logger.Error(errMsg, err)
 			results = append(results, models.Backup{
-				DeviceID: deviceID, Status: "failed",
-				ErrorMessage: "credentials: " + err.Error(),
+				DeviceID:     deviceID,
+				Status:       "failed",
+				ErrorMessage: errMsg,
+			})
+			runtime.EventsEmit(a.ctx, "backup:progress", map[string]interface{}{
+				"device_id": deviceID,
+				"device_ip": device.IP,
+				"status":    "failed",
+				"error":     errMsg,
 			})
 			continue
 		}
@@ -518,6 +831,13 @@ func (a *App) RunBackup(req BackupRequest) ([]models.Backup, error) {
 		if configType == "" {
 			configType = "running"
 		}
+
+		runtime.EventsEmit(a.ctx, "backup:progress", map[string]interface{}{
+			"device_id": deviceID,
+			"device_ip": device.IP,
+			"status":    "running",
+			"message":   fmt.Sprintf("Connexion SSH à %s...", device.IP),
+		})
 
 		ctx, cancel := context.WithTimeout(a.ctx, 120*time.Second)
 		result, err := a.backupMgr.Run(ctx, backup.BackupRequest{
@@ -534,13 +854,21 @@ func (a *App) RunBackup(req BackupRequest) ([]models.Backup, error) {
 		}
 
 		status := "success"
+		errMsg := ""
 		if err != nil {
 			status = "failed"
+			errMsg = err.Error()
 		}
 		runtime.EventsEmit(a.ctx, "backup:progress", map[string]interface{}{
 			"device_id": deviceID,
+			"device_ip": device.IP,
 			"status":    status,
+			"error":     errMsg,
 		})
+
+		logger.AuditAction(a.ctx, "backup", "device", deviceID,
+			fmt.Sprintf(`{"ip":"%s","config_type":"%s","result":"%s"}`, device.IP, configType, status),
+			status, 0)
 	}
 
 	return results, nil
@@ -566,6 +894,83 @@ func (a *App) ExportBackupsZip(backupIDs []string) (string, error) {
 		return "", err
 	}
 	return destPath, a.backupMgr.ExportZip(backupIDs, destPath)
+}
+
+// ─────────────────────────────────────────────
+// TERMINAL SSH
+// ─────────────────────────────────────────────
+
+// RunTerminalCommand executes a command on a device via SSH and streams output
+func (a *App) RunTerminalCommand(deviceID string, command string) (string, error) {
+	var device models.Device
+	if err := db.DB.First(&device, "id = ?", deviceID).Error; err != nil {
+		return "", fmt.Errorf("équipement introuvable: %w", err)
+	}
+
+	if device.SSHPort == 0 {
+		device.SSHPort = 22
+	}
+
+	emitLine := func(line string, isError bool) {
+		runtime.EventsEmit(a.ctx, "terminal:output", map[string]interface{}{
+			"device_id": deviceID,
+			"line":      line,
+			"error":     isError,
+		})
+	}
+
+	username, password, privateKey, err := a.getCredentials(device.CredentialID)
+	if err != nil {
+		emitLine(fmt.Sprintf("ERREUR credentials: %v\n", err), true)
+		return "", err
+	}
+
+	emitLine(fmt.Sprintf("Connexion SSH à %s (%s) port %d...\n", device.Hostname, device.IP, device.SSHPort), false)
+
+	ctx, cancel := context.WithTimeout(a.ctx, 120*time.Second)
+	defer cancel()
+
+	sess, err := ssh.Connect(ctx, ssh.ConnectParams{
+		Host:       device.IP,
+		Port:       device.SSHPort,
+		Username:   username,
+		Password:   password,
+		PrivateKey: privateKey,
+		Vendor:     device.Vendor,
+		Timeout:    30 * time.Second,
+	})
+	if err != nil {
+		emitLine(fmt.Sprintf("ERREUR connexion: %v\n", err), true)
+		logger.AuditAction(a.ctx, "terminal_command", "device", deviceID,
+			fmt.Sprintf(`{"ip":"%s","command":"%s","error":"%v"}`, device.IP, command, err),
+			"failed", 0)
+		return "", err
+	}
+	defer sess.Close()
+
+	emitLine(fmt.Sprintf("Connecté. Exécution: %s\n", command), false)
+	emitLine(strings.Repeat("─", 60)+"\n", false)
+
+	start := time.Now()
+	output, err := sess.RunCommandInteractive(ctx, command)
+	duration := time.Since(start)
+
+	if err != nil {
+		emitLine(fmt.Sprintf("\nERREUR: %v\n", err), true)
+		logger.AuditAction(a.ctx, "terminal_command", "device", deviceID,
+			fmt.Sprintf(`{"ip":"%s","command":"%s","error":"%v"}`, device.IP, command, err),
+			"failed", duration.Milliseconds())
+		return "", err
+	}
+
+	emitLine(output+"\n", false)
+	emitLine(fmt.Sprintf("\n%s\nTerminé en %s\n", strings.Repeat("─", 60), duration.Round(time.Millisecond)), false)
+
+	logger.AuditAction(a.ctx, "terminal_command", "device", deviceID,
+		fmt.Sprintf(`{"ip":"%s","command":"%s","output_len":%d}`, device.IP, command, len(output)),
+		"success", duration.Milliseconds())
+
+	return output, nil
 }
 
 // ─────────────────────────────────────────────
@@ -622,6 +1027,8 @@ func (a *App) RunAudit(deviceIDs []string) ([]audit.AuditReport, error) {
 				DeviceIP:   device.IP,
 				TotalRules: 0,
 			})
+			logger.AuditAction(a.ctx, "audit", "device", deviceID,
+				fmt.Sprintf(`{"ip":"%s","error":"no_backup"}`, device.IP), "failed", 0)
 			continue
 		}
 
@@ -639,6 +1046,10 @@ func (a *App) RunAudit(deviceIDs []string) ([]audit.AuditReport, error) {
 
 		if err == nil && report != nil {
 			reports = append(reports, *report)
+			logger.AuditAction(a.ctx, "audit", "device", deviceID,
+				fmt.Sprintf(`{"ip":"%s","score":%.0f,"passed":%d,"total":%d}`,
+					device.IP, report.Score, report.Passed, report.TotalRules),
+				"success", 0)
 		}
 	}
 
@@ -758,6 +1169,9 @@ func (a *App) RunPlaybook(req PlaybookRunRequest) ([]playbook.ExecutionResult, e
 		if err := db.DB.First(&device, "id = ?", deviceID).Error; err != nil {
 			continue
 		}
+		if device.SSHPort == 0 {
+			device.SSHPort = 22
+		}
 		username, password, _, err := a.getCredentials(device.CredentialID)
 		if err != nil {
 			continue
@@ -779,6 +1193,9 @@ func (a *App) RunPlaybook(req PlaybookRunRequest) ([]playbook.ExecutionResult, e
 			"device_id": deviceID,
 			"status":    status,
 		})
+		logger.AuditAction(a.ctx, "playbook_run", "device", deviceID,
+			fmt.Sprintf(`{"ip":"%s","playbook":"%s","status":"%s"}`, device.IP, pb.Name, status),
+			status, 0)
 	}
 	return results, nil
 }
@@ -818,7 +1235,7 @@ func (a *App) ToggleScheduledJob(id string, enabled bool) error {
 }
 
 // ─────────────────────────────────────────────
-// AUDIT LOGS
+// AUDIT LOGS & JOURNAUX
 // ─────────────────────────────────────────────
 
 // AuditLogQuery defines filtering for audit logs
@@ -830,15 +1247,50 @@ type AuditLogQuery struct {
 
 func (a *App) GetAuditLogs(query AuditLogQuery) ([]models.AuditLog, error) {
 	if query.Limit <= 0 {
-		query.Limit = 100
+		query.Limit = 500
 	}
 	var logs []models.AuditLog
 	q := db.DB.Order("created_at DESC").Limit(query.Limit).Offset(query.Offset)
 	if query.Action != "" {
-		q = q.Where("action LIKE ?", "%"+query.Action+"%")
+		q = q.Where("action LIKE ? OR entity_type LIKE ? OR details LIKE ?",
+			"%"+query.Action+"%", "%"+query.Action+"%", "%"+query.Action+"%")
 	}
 	err := q.Find(&logs).Error
 	return logs, err
+}
+
+// GetLogFiles lists available log files in the logs directory
+func (a *App) GetLogFiles() []string {
+	logDir := filepath.Join(a.dataDir, "logs")
+	entries, err := os.ReadDir(logDir)
+	if err != nil {
+		return []string{}
+	}
+	var files []string
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".log") {
+			files = append(files, e.Name())
+		}
+	}
+	return files
+}
+
+// GetLogFileContent reads the content of a log file (security: only log files allowed)
+func (a *App) GetLogFileContent(filename string) (string, error) {
+	// Security: reject path traversal attempts
+	clean := filepath.Base(filename)
+	if clean != filename || strings.Contains(filename, "..") {
+		return "", fmt.Errorf("nom de fichier invalide")
+	}
+	if !strings.HasSuffix(clean, ".log") {
+		return "", fmt.Errorf("seuls les fichiers .log sont accessibles")
+	}
+	logDir := filepath.Join(a.dataDir, "logs")
+	content, err := os.ReadFile(filepath.Join(logDir, clean))
+	if err != nil {
+		return "", fmt.Errorf("lecture du journal: %w", err)
+	}
+	return string(content), nil
 }
 
 // ─────────────────────────────────────────────
@@ -885,23 +1337,37 @@ func (a *App) SaveSettings(settings AppSettings) error {
 // ─────────────────────────────────────────────
 
 func (a *App) runScheduledJob(ctx context.Context, jobType string, payload map[string]interface{}) error {
+	logger.AuditAction(a.ctx, "scheduled_job_start", "scheduler", jobType,
+		fmt.Sprintf(`{"job_type":"%s"}`, jobType), "running", 0)
+
+	start := time.Now()
+	var err error
+
 	switch jobType {
 	case "backup":
 		deviceIDs := extractStringSlice(payload, "device_ids")
 		configType := extractString(payload, "config_type", "running")
-		_, err := a.RunBackup(BackupRequest{DeviceIDs: deviceIDs, ConfigType: configType})
-		return err
+		_, err = a.RunBackup(BackupRequest{DeviceIDs: deviceIDs, ConfigType: configType})
 	case "scan":
 		cidr := extractString(payload, "cidr", "")
 		credID := extractString(payload, "credential_id", "")
 		if cidr == "" {
-			return fmt.Errorf("scan job missing cidr")
+			err = fmt.Errorf("scan job missing cidr")
+		} else {
+			_, err = a.ScanNetwork(ScanRequest{CIDR: cidr, CredentialID: credID})
 		}
-		_, err := a.ScanNetwork(ScanRequest{CIDR: cidr, CredentialID: credID})
-		return err
 	default:
-		return fmt.Errorf("unknown job type: %s", jobType)
+		err = fmt.Errorf("unknown job type: %s", jobType)
 	}
+
+	status := "success"
+	details := fmt.Sprintf(`{"job_type":"%s","duration_ms":%d}`, jobType, time.Since(start).Milliseconds())
+	if err != nil {
+		status = "failed"
+		details = fmt.Sprintf(`{"job_type":"%s","error":"%v","duration_ms":%d}`, jobType, err, time.Since(start).Milliseconds())
+	}
+	logger.AuditAction(a.ctx, "scheduled_job_end", "scheduler", jobType, details, status, time.Since(start).Milliseconds())
+	return err
 }
 
 func extractString(m map[string]interface{}, key, def string) string {
