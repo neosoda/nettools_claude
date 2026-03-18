@@ -157,7 +157,7 @@ func (s *Session) RunCommandInteractive(ctx context.Context, command string) (st
 		ssh.TTY_OP_ISPEED: 9600,
 		ssh.TTY_OP_OSPEED: 9600,
 	}
-	if err := sess.RequestPty("vt100", 0, 512, modes); err != nil {
+	if err := sess.RequestPty("vt100", 200, 512, modes); err != nil {
 		return "", fmt.Errorf("pty request: %w", err)
 	}
 
@@ -174,23 +174,43 @@ func (s *Session) RunCommandInteractive(ctx context.Context, command string) (st
 		return "", fmt.Errorf("shell: %w", err)
 	}
 
-	// Send command
-	time.Sleep(500 * time.Millisecond)
-	fmt.Fprintf(stdin, "%s\n", command)
-
-	// Read with timeout and pagination handling
+	// Wait for shell to be ready (prompt to appear)
 	vc := vendorConfigs[s.vendor]
 	if _, ok := vendorConfigs[s.vendor]; !ok {
 		vc = vendorConfigs["unknown"]
 	}
 
+	// Wait until we see the initial prompt before sending the command
+	waitReady := time.NewTicker(100 * time.Millisecond)
+	readyDeadline := time.After(10 * time.Second)
+	waitLoop:
+	for {
+		select {
+		case <-ctx.Done():
+			waitReady.Stop()
+			return "", ctx.Err()
+		case <-readyDeadline:
+			waitReady.Stop()
+			break waitLoop
+		case <-waitReady.C:
+			if vc.PromptPattern.MatchString(strings.TrimSpace(sb.String())) {
+				waitReady.Stop()
+				break waitLoop
+			}
+		}
+	}
+
+	// Send command
+	fmt.Fprintf(stdin, "%s\n", command)
+
+	// Read with timeout and pagination handling
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
 		deadline := time.After(s.timeout)
-		tick := time.NewTicker(100 * time.Millisecond)
+		tick := time.NewTicker(150 * time.Millisecond)
 		defer tick.Stop()
-		lastLen := 0
+		lastLen := -1
 		stableCount := 0
 		for {
 			select {
@@ -200,14 +220,21 @@ func (s *Session) RunCommandInteractive(ctx context.Context, command string) (st
 				return
 			case <-tick.C:
 				current := sb.String()
+				// Handle pagination
 				if vc.PaginationPattern.MatchString(current) {
 					fmt.Fprint(stdin, vc.PaginationSend)
 					stableCount = 0
+					lastLen = len(current)
 					continue
 				}
 				if len(current) == lastLen {
 					stableCount++
-					if stableCount > 15 && vc.PromptPattern.MatchString(strings.TrimSpace(current)) {
+					// Require 20 stable ticks (3s) AND a prompt at end
+					if stableCount >= 20 && vc.PromptPattern.MatchString(strings.TrimSpace(current)) {
+						return
+					}
+					// Safety: return after 40 stable ticks even without prompt
+					if stableCount >= 40 {
 						return
 					}
 				} else {

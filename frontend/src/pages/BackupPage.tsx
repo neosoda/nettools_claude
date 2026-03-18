@@ -46,7 +46,7 @@ export default function BackupPage() {
     queryFn: async () => { const m = await getBackend(); return m.GetBackups(selectedDevice) },
   })
 
-  // Load last scan devices when source changes
+  // Load devices when source or allDevices changes
   useEffect(() => {
     if (deviceSource === 'last_scan') {
       getBackend().then(m => m.GetLastScanDevices()).then(devs => {
@@ -54,11 +54,12 @@ export default function BackupPage() {
         setSelectedDevices((devs || []).map((d: any) => d.id))
       })
     } else if (deviceSource === 'inventory') {
+      // allDevices loads async — re-run when it arrives
       setSelectedDevices((allDevices as any[]).map((d: any) => d.id))
-    } else {
-      setSelectedDevices([])
+    } else if (deviceSource === 'manual') {
+      // manual mode: selection managed by handleResolveManualIPs, don't reset here
     }
-  }, [deviceSource])
+  }, [deviceSource, allDevices])
 
   // Resolve manual IPs to known devices
   const handleResolveManualIPs = async () => {
