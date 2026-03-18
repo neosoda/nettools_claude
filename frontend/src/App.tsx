@@ -2,14 +2,13 @@ import { Routes, Route, NavLink } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  Server, Network, DatabaseBackup, GitCompare, ShieldCheck,
+  Network, DatabaseBackup, GitCompare, ShieldCheck,
   Terminal, CalendarClock, GitGraph, ScrollText, Settings, Activity, Square, KeyRound
 } from 'lucide-react'
 import { cn } from './lib/utils'
 import { EventsOn } from '../wailsjs/runtime/runtime'
 import { CredentialProvider, useGlobalCredential } from './context/CredentialContext'
 
-import InventoryPage from './pages/InventoryPage'
 import ScanPage from './pages/ScanPage'
 import BackupPage from './pages/BackupPage'
 import DiffPage from './pages/DiffPage'
@@ -21,7 +20,6 @@ import LogsPage from './pages/LogsPage'
 import SettingsPage from './pages/SettingsPage'
 
 const navItems = [
-  { to: '/', icon: Server, label: 'Inventaire' },
   { to: '/scan', icon: Network, label: 'Découverte' },
   { to: '/backup', icon: DatabaseBackup, label: 'Backups' },
   { to: '/diff', icon: GitCompare, label: 'Comparateur' },
@@ -103,7 +101,7 @@ function AppContent() {
             <NavLink
               key={to}
               to={to}
-              end={to === '/'}
+              end
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
@@ -140,7 +138,7 @@ function AppContent() {
       {/* Main content */}
       <main className="flex-1 overflow-hidden">
         <Routes>
-          <Route path="/" element={<InventoryPage />} />
+          <Route path="/" element={<ScanPage />} />
           <Route path="/scan" element={<ScanPage />} />
           <Route path="/backup" element={<BackupPage />} />
           <Route path="/diff" element={<DiffPage />} />

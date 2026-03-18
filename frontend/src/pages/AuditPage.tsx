@@ -9,34 +9,27 @@ import Select from '../components/Select'
 
 async function getBackend() { return import('../../wailsjs/go/main/App') }
 
+type DeviceSource = 'last_scan' | 'manual'
+
 export default function AuditPage() {
   const qc = useQueryClient()
+  const [deviceSource, setDeviceSource] = useState<DeviceSource>('last_scan')
+  const [lastScanDevices, setLastScanDevices] = useState<any[]>([])
   const [selectedDevices, setSelectedDevices] = useState<string[]>([])
+  const [manualIpText, setManualIpText] = useState('')
   const [selectedRules, setSelectedRules] = useState<string[]>([])
   const [reports, setReports] = useState<any[]>([])
   const [showRuleModal, setShowRuleModal] = useState(false)
   const [editRule, setEditRule] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<'run' | 'rules'>('run')
-  const [useLastScan, setUseLastScan] = useState(false)
-  const [lastScanDevices, setLastScanDevices] = useState<any[]>([])
   const [showRuleFilter, setShowRuleFilter] = useState(true)
 
-  const { data: allDevices = [] } = useQuery({
-    queryKey: ['devices'],
-    queryFn: async () => { const m = await getBackend(); return m.GetDevices() },
-  })
   const { data: rules = [] } = useQuery({
     queryKey: ['audit-rules'],
     queryFn: async () => { const m = await getBackend(); return m.GetAuditRules() },
-    onSuccess: (data: any[]) => {
-      // Auto-select all rules when first loaded
-      if (selectedRules.length === 0 && data.length > 0) {
-        setSelectedRules(data.map((r: any) => r.id))
-      }
-    },
   } as any)
 
-  // Sync selectedRules when rules load
+  // Auto-select all rules on load
   useEffect(() => {
     const ruleList = rules as any[]
     if (ruleList.length > 0 && selectedRules.length === 0) {
@@ -46,7 +39,7 @@ export default function AuditPage() {
 
   // Load last scan devices
   useEffect(() => {
-    if (useLastScan) {
+    if (deviceSource === 'last_scan') {
       getBackend().then(m => m.GetLastScanDevices()).then(devs => {
         setLastScanDevices(devs || [])
         setSelectedDevices((devs || []).map((d: any) => d.id))
@@ -55,19 +48,26 @@ export default function AuditPage() {
       setLastScanDevices([])
       setSelectedDevices([])
     }
-  }, [useLastScan])
+  }, [deviceSource])
 
-  const devices = useLastScan ? lastScanDevices : (allDevices as any[])
+  // For manual mode: build ephemeral device list from IPs
+  const manualIPs = manualIpText.split(/[\n,;]+/).map((s: string) => s.trim()).filter(Boolean)
 
   const auditMutation = useMutation({
     mutationFn: async () => {
       const m = await getBackend()
       const allRuleIDs = (rules as any[]).map((r: any) => r.id)
       const useFiltered = selectedRules.length < allRuleIDs.length
-      if (useFiltered) {
-        return m.RunAuditFiltered(selectedDevices, selectedRules)
+
+      let deviceIDs = selectedDevices
+      if (deviceSource === 'manual') {
+        // Resolve IPs to device IDs (auto-created by previous backups/scans)
+        const found = await m.GetDevicesByIPs(manualIPs)
+        deviceIDs = (found || []).map((d: any) => d.id)
       }
-      return m.RunAudit(selectedDevices)
+
+      if (useFiltered) return m.RunAuditFiltered(deviceIDs, selectedRules)
+      return m.RunAudit(deviceIDs)
     },
     onSuccess: (data: any) => setReports(data || []),
   })
@@ -92,6 +92,7 @@ export default function AuditPage() {
   ]
 
   const allRulesSelected = selectedRules.length === (rules as any[]).length
+  const canAudit = deviceSource === 'manual' ? manualIPs.length > 0 : selectedDevices.length > 0
 
   return (
     <div className="flex flex-col h-full">
@@ -104,44 +105,58 @@ export default function AuditPage() {
       <div className="flex-1 overflow-auto p-6 space-y-4">
         {activeTab === 'run' ? (
           <>
-            {/* Device selection */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-slate-300">
-                  Équipements à auditer ({selectedDevices.length}/{devices.length})
-                </h2>
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
-                    <div onClick={() => setUseLastScan(v => !v)}
-                      className={`relative w-9 h-5 rounded-full transition-colors ${useLastScan ? 'bg-blue-600' : 'bg-slate-700'}`}>
-                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${useLastScan ? 'left-4' : 'left-0.5'}`} />
-                    </div>
-                    Dernier scan
-                    {useLastScan && lastScanDevices.length > 0 && (
-                      <span className="text-blue-400">({lastScanDevices.length})</span>
-                    )}
-                  </label>
-                  <button
-                    onClick={() => setSelectedDevices(selectedDevices.length === devices.length ? [] : devices.map((d: any) => d.id))}
-                    className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
-                    {selectedDevices.length === devices.length ? 'Tout désélectionner' : 'Tout sélectionner'}
-                  </button>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+              {/* Device source selector */}
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-slate-300">Équipements à auditer</h2>
+                <div className="flex gap-1 bg-slate-800 rounded-lg p-0.5">
+                  {(['last_scan', 'manual'] as DeviceSource[]).map(mode => (
+                    <button key={mode} onClick={() => setDeviceSource(mode)}
+                      className={`px-3 py-1 rounded-md text-xs transition-colors ${deviceSource === mode ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}>
+                      {mode === 'last_scan' ? 'Dernier scan' : 'Saisie manuelle'}
+                    </button>
+                  ))}
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {devices.map((d: any) => (
-                  <button key={d.id}
-                    onClick={() => setSelectedDevices(prev => prev.includes(d.id) ? prev.filter(x => x !== d.id) : [...prev, d.id])}
-                    className={`px-3 py-1.5 rounded-md text-xs border ${selectedDevices.includes(d.id) ? 'bg-blue-600/20 border-blue-600 text-blue-400' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
-                    {d.hostname || d.ip}
-                  </button>
-                ))}
-                {devices.length === 0 && (
-                  <p className="text-xs text-slate-500 italic">
-                    {useLastScan ? 'Aucun équipement dans le dernier scan.' : 'Aucun équipement en inventaire.'}
+
+              {deviceSource === 'last_scan' && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-slate-500">{selectedDevices.length} équipement(s) sélectionné(s)</p>
+                    <button onClick={() => setSelectedDevices(selectedDevices.length === lastScanDevices.length ? [] : lastScanDevices.map((d: any) => d.id))}
+                      className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                      {selectedDevices.length === lastScanDevices.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {lastScanDevices.map((d: any) => (
+                      <button key={d.id}
+                        onClick={() => setSelectedDevices(prev => prev.includes(d.id) ? prev.filter(x => x !== d.id) : [...prev, d.id])}
+                        className={`px-3 py-1.5 rounded-md text-xs border ${selectedDevices.includes(d.id) ? 'bg-blue-600/20 border-blue-600 text-blue-400' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
+                        {d.hostname || d.ip}
+                      </button>
+                    ))}
+                    {lastScanDevices.length === 0 && (
+                      <p className="text-xs text-amber-400">Aucun équipement dans le dernier scan. Lancez une découverte réseau d'abord.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {deviceSource === 'manual' && (
+                <div>
+                  <label className="text-xs font-medium text-slate-400 block mb-1">
+                    Liste d'IPs (une par ligne ou séparées par virgule)
+                  </label>
+                  <textarea value={manualIpText} onChange={e => setManualIpText(e.target.value)}
+                    placeholder={"10.113.76.1\n10.113.76.2"}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-md p-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500 resize-none"
+                    rows={3} />
+                  <p className="text-xs text-slate-500 mt-1">
+                    L'audit analysera les backups existants pour ces IPs.
                   </p>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Rule filter */}
               <div className="border-t border-slate-800 pt-3">
@@ -163,7 +178,6 @@ export default function AuditPage() {
                     </button>
                   )}
                 </div>
-
                 {showRuleFilter && (
                   <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
                     {(rules as any[]).map((rule: any) => (
@@ -191,14 +205,12 @@ export default function AuditPage() {
                 )}
               </div>
 
-              <div className="mt-3">
-                <Button variant="primary" loading={auditMutation.isPending}
-                  disabled={selectedDevices.length === 0 || selectedRules.length === 0}
-                  onClick={() => auditMutation.mutate()}>
-                  <Play className="w-4 h-4" /> Auditer ({selectedDevices.length})
-                  {!allRulesSelected && ` — ${selectedRules.length} règles`}
-                </Button>
-              </div>
+              <Button variant="primary" loading={auditMutation.isPending}
+                disabled={!canAudit || selectedRules.length === 0}
+                onClick={() => auditMutation.mutate()}>
+                <Play className="w-4 h-4" /> Auditer
+                {!allRulesSelected && ` — ${selectedRules.length} règles`}
+              </Button>
             </div>
 
             {reports.map((report: any) => (
