@@ -2,8 +2,10 @@ package diff
 
 import (
 	"fmt"
+	"html"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -104,6 +106,83 @@ func Compare(textA, textB string, opts CompareOptions) (*DiffResult, error) {
 
 	result.Summary = fmt.Sprintf("+%d -%d =%d lines", result.Added, result.Removed, result.Unchanged)
 	return result, nil
+}
+
+// ExportHTML generates a self-contained HTML file representing the diff result.
+// The generated file uses an embedded dark theme and requires no external dependencies.
+func ExportHTML(result *DiffResult, nameA, nameB string) string {
+	var rows strings.Builder
+	for _, line := range result.Diffs {
+		var cls, sign, numA, numB string
+		switch line.Type {
+		case "insert":
+			cls, sign = "ins", "+"
+			numA = "&nbsp;"
+			numB = fmt.Sprintf("%d", line.LineB)
+		case "delete":
+			cls, sign = "del", "-"
+			numA = fmt.Sprintf("%d", line.LineA)
+			numB = "&nbsp;"
+		default:
+			cls, sign = "eq", "&nbsp;"
+			numA = fmt.Sprintf("%d", line.LineA)
+			numB = fmt.Sprintf("%d", line.LineB)
+		}
+		rows.WriteString(fmt.Sprintf(
+			`<tr class="%s"><td class="n">%s</td><td class="n">%s</td><td class="s">%s</td><td class="c">%s</td></tr>`,
+			cls, numA, numB, sign, html.EscapeString(line.Content),
+		))
+	}
+
+	return fmt.Sprintf(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Diff — %s vs %s</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f172a;color:#94a3b8;font-family:monospace;font-size:12px}
+.hdr{background:#1e293b;border-bottom:1px solid #334155;padding:16px 24px}
+.hdr h1{color:#e2e8f0;font-size:15px;margin-bottom:6px}
+.hdr .meta{font-size:11px;color:#64748b;margin-bottom:8px}
+.stats{display:flex;gap:20px;font-size:12px}
+.add{color:#4ade80}.rem{color:#f87171}.eq{color:#475569}
+table{width:100%;border-collapse:collapse}
+td{padding:1px 6px;white-space:pre}
+td.n{color:#475569;text-align:right;width:44px;user-select:none;border-right:1px solid #1e293b}
+td.s{color:#475569;width:16px;text-align:center;font-weight:700}
+td.c{width:100%%}
+tr.ins{background:rgba(34,197,94,.08);border-left:2px solid #22c55e}
+tr.ins td.s{color:#4ade80}
+tr.ins td.c{color:#86efac}
+tr.del{background:rgba(239,68,68,.08);border-left:2px solid #ef4444}
+tr.del td.s{color:#f87171}
+tr.del td.c{color:#fca5a5}
+tr.eq{border-left:2px solid transparent}
+tr.eq td.c{color:#4b5563}
+.ftr{padding:10px 24px;font-size:11px;color:#334155;border-top:1px solid #1e293b;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <h1>Comparaison de configurations</h1>
+  <div class="meta">A&nbsp;: <strong style="color:#93c5fd">%s</strong> &nbsp;→&nbsp; B&nbsp;: <strong style="color:#93c5fd">%s</strong></div>
+  <div class="stats">
+    <span class="add">+%d lignes ajoutées</span>
+    <span class="rem">-%d lignes supprimées</span>
+    <span class="eq">=%d lignes identiques</span>
+  </div>
+</div>
+<table>%s</table>
+<div class="ftr">Généré par NetworkTools le %s</div>
+</body>
+</html>`,
+		html.EscapeString(nameA), html.EscapeString(nameB),
+		html.EscapeString(nameA), html.EscapeString(nameB),
+		result.Added, result.Removed, result.Unchanged,
+		rows.String(),
+		time.Now().Format("02/01/2006 à 15:04"),
+	)
 }
 
 func applyIgnore(lines []string, patterns []string) []string {

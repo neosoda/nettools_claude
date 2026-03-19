@@ -29,11 +29,21 @@ Application desktop de gestion réseau pour administrateurs, construite avec **W
 - Filtrage par fabricant
 - Sélection **depuis le dernier scan**
 - Score en pourcentage avec barre de progression colorée
+- **Diagnostic enrichi** : en cas d'échec, les mots-clés trouvés / manquants dans la config sont affichés
+- **22 règles prédéfinies** adaptées à l'environnement Aruba/HPE Région Grand Est :
+  - Sécurité : chiffrement passwords, désactivation HTTP/DHCP/Telnet, suppression compte `manager`
+  - SSH : service activé, restriction aux utilisateurs autorisés
+  - Journalisation : facility `local0`, serveur syslog `10.113.x.x`
+  - Heure : timezone Paris, NTP `ntp.lor.numerique-educatif.fr`
+  - SNMP community `TICE`, AAA/Radius
+  - L2 : RSTP, LLDP, loop-protection, multicast routing, private VLAN 999
+  - VLANs métier : 1 (Administratif), 401 (PEDAGO), 502 (DMZ-PRIV), 504 (DMZ-PEDAGO), 517 (SERVEURS-PEDA)
 
 ### Comparateur de configuration
 - Diff ligne par ligne avec indicateurs +/-
 - Ignorer des patterns (regex)
 - Comparaison directe entre deux backups
+- **Export HTML** — rapport standalone avec thème sombre, partageable sans outil tiers
 
 ### Playbooks SSH
 - Définition en YAML : nom, timeout, étapes (commande + expect + on_error)
@@ -90,7 +100,7 @@ networktools/
 ├── main.go                   # Point d'entrée
 ├── internal/
 │   ├── db/                   # SQLite + modèles GORM
-│   ├── snmp/                 # Scanner réseau + mapping OID→modèle
+│   ├── snmp/                 # Scanner réseau + mapping OID→modèle (70+ équipements)
 │   ├── backup/               # Gestionnaire de backups SSH
 │   ├── playbook/             # Exécuteur de playbooks YAML
 │   ├── scheduler/            # Planificateur cron

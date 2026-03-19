@@ -38,6 +38,10 @@ export function ExportBackupsZip(arg1) {
   return window['go']['main']['App']['ExportBackupsZip'](arg1);
 }
 
+export function ExportDiffHTML(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ExportDiffHTML'](arg1, arg2, arg3);
+}
+
 export function ExportScanToExcel(arg1) {
   return window['go']['main']['App']['ExportScanToExcel'](arg1);
 }

@@ -26,6 +26,8 @@ export function DeleteScheduledJob(arg1:string):Promise<void>;
 
 export function ExportBackupsZip(arg1:Array<string>):Promise<string>;
 
+export function ExportDiffHTML(arg1:main.DiffRequest,arg2:string,arg3:string):Promise<string>;
+
 export function ExportScanToExcel(arg1:Array<string>):Promise<string>;
 
 export function GetAuditLogs(arg1:main.AuditLogQuery):Promise<Array<models.AuditLog>>;

@@ -156,7 +156,7 @@ func evaluateRule(rule models.AuditRule, config string) (passed bool, details st
 
 	if !passed {
 		if rule.MustMatch {
-			details = fmt.Sprintf("Pattern not found: %s", rule.Pattern)
+			details = diagnoseFailure(rule.Pattern, config)
 		} else {
 			// Show the matching line for forbidden patterns
 			loc := re.FindString(config)
@@ -239,6 +239,43 @@ func expandRemediation(template string, device models.Device) string {
 		"{{vendor}}", device.Vendor,
 	)
 	return r.Replace(template)
+}
+
+// diagnoseFailure provides a detailed explanation when a MustMatch rule fails.
+// It extracts keywords from the pattern, checks which are present/absent in the config,
+// and returns a human-readable message to speed up troubleshooting.
+func diagnoseFailure(pattern, config string) string {
+	wordRe := regexp.MustCompile(`[a-zA-Z][a-zA-Z0-9_\-]{2,}`)
+	words := wordRe.FindAllString(pattern, -1)
+
+	if len(words) == 0 {
+		return fmt.Sprintf("Pattern not found: %s", pattern)
+	}
+
+	configLower := strings.ToLower(config)
+	var found, missing []string
+	seen := map[string]bool{}
+	for _, w := range words {
+		wl := strings.ToLower(w)
+		if seen[wl] {
+			continue
+		}
+		seen[wl] = true
+		if strings.Contains(configLower, wl) {
+			found = append(found, w)
+		} else {
+			missing = append(missing, w)
+		}
+	}
+
+	switch {
+	case len(missing) == 0:
+		return fmt.Sprintf("Pattern structure absent (mots-clés présents: %s)", strings.Join(found, ", "))
+	case len(found) == 0:
+		return fmt.Sprintf("Aucune correspondance — mots-clés absents: %s", strings.Join(missing, ", "))
+	default:
+		return fmt.Sprintf("Partiel — trouvé: [%s] / manquant: [%s]", strings.Join(found, ", "), strings.Join(missing, ", "))
+	}
 }
 
 func truncate(s string, max int) string {

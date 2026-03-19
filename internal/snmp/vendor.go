@@ -23,6 +23,15 @@ var oidModelMap = map[string]string{
 	"11.2.3.7.11.181.19": "Aruba 2930F 48",
 	"11.2.3.7.11.181.20": "Aruba 2930F 24 PoE",
 	"11.2.3.7.11.182.18": "Aruba 2540 24G JL354A",
+	"11.2.3.7.11.160":    "Aruba 2930F 24G",
+	"11.2.3.7.11.161":    "Aruba 2930F 48G",
+	"11.2.3.7.11.162":    "Aruba 2930F 24G PoE+",
+	"11.2.3.7.11.163":    "Aruba 2930F 48G PoE+",
+	// Aruba 6300 / 6200 series (enterprise prefix 47196)
+	"47196.4.1.1.1.11": "Aruba 6300M 24G 4SFP56",
+	"47196.4.1.1.1.12": "Aruba 6300M 48G 4SFP56",
+	"47196.4.1.1.1.41": "Aruba 6200F 24G 4SFP+",
+	"47196.4.1.1.1.42": "Aruba 6200F 48G 4SFP+",
 	// H3C
 	"43.1.16.4.3.22": "H3C 4550 50",
 	// DLink
@@ -101,6 +110,8 @@ func ParseVendorFromOID(sysObjectID string) string {
 		return "netgear"
 	case strings.HasPrefix(suffix, "25506."):
 		return "huawei"
+	case strings.HasPrefix(suffix, "47196."):
+		return "aruba"
 	default:
 		return ""
 	}

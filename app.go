@@ -1113,6 +1113,37 @@ func (a *App) CompareDiff(req DiffRequest) (*diff.DiffResult, error) {
 	})
 }
 
+// ExportDiffHTML generates a diff, opens a save-file dialog, and writes a standalone HTML file.
+// Returns the saved file path on success.
+func (a *App) ExportDiffHTML(req DiffRequest, nameA, nameB string) (string, error) {
+	result, err := diff.Compare(req.TextA, req.TextB, diff.CompareOptions{
+		IgnorePatterns:   req.IgnorePatterns,
+		IgnoreCase:       req.IgnoreCase,
+		IgnoreWhitespace: req.IgnoreWhitespace,
+		TrimTrailing:     req.TrimTrailing,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	htmlContent := diff.ExportHTML(result, nameA, nameB)
+
+	path, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		DefaultFilename: "diff.html",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "HTML (*.html)", Pattern: "*.html"},
+		},
+	})
+	if err != nil || path == "" {
+		return "", err
+	}
+
+	if err := os.WriteFile(path, []byte(htmlContent), 0644); err != nil {
+		return "", fmt.Errorf("écriture fichier: %w", err)
+	}
+	return path, nil
+}
+
 func (a *App) CompareBackups(backupIDA, backupIDB string) (*diff.DiffResult, error) {
 	textA, err := a.backupMgr.GetContent(backupIDA)
 	if err != nil {

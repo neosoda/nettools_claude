@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, DragEvent } from 'react'
-import { GitCompare, Upload, X } from 'lucide-react'
+import { GitCompare, Upload, X, FileDown } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import Button from '../components/Button'
 
@@ -20,6 +20,7 @@ export default function DiffPage() {
   const [diffs, setDiffs] = useState<DiffLine[]>([])
   const [stats, setStats] = useState<{ added: number; removed: number; unchanged: number; summary: string } | null>(null)
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   // Options
   const [ignoreCase, setIgnoreCase] = useState(false)
@@ -67,6 +68,20 @@ export default function DiffPage() {
     }
   }, [readFile])
 
+  const handleExportHTML = async () => {
+    setExporting(true)
+    try {
+      const m = await getBackend()
+      const patterns = ignorePatterns.split('\n').map(s => s.trim()).filter(Boolean)
+      await m.ExportDiffHTML(
+        { text_a: textA, text_b: textB, ignore_patterns: patterns,
+          ignore_case: ignoreCase, ignore_whitespace: ignoreWhitespace, trim_trailing: trimTrailing },
+        fileNameA || 'Config A',
+        fileNameB || 'Config B',
+      )
+    } finally { setExporting(false) }
+  }
+
   const handleCompare = async () => {
     setLoading(true)
     try {
@@ -111,6 +126,11 @@ export default function DiffPage() {
                 <span className="text-red-400">-{stats.removed}</span>
                 <span className="text-slate-500">={stats.unchanged}</span>
               </div>
+            )}
+            {diffs.length > 0 && (
+              <Button variant="secondary" loading={exporting} onClick={handleExportHTML}>
+                <FileDown className="w-4 h-4" /> Export HTML
+              </Button>
             )}
             <Button variant="primary" loading={loading} onClick={handleCompare}
               disabled={!textA.trim() || !textB.trim()}>

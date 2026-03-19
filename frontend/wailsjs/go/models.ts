@@ -1,5 +1,5 @@
 export namespace audit {
-
+	
 	export class AuditReport {
 	    device_id: string;
 	    device_ip: string;
@@ -12,11 +12,11 @@ export namespace audit {
 	    remediation: string;
 	    // Go type: time
 	    created_at: any;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new AuditReport(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.device_id = source["device_id"];
@@ -78,11 +78,11 @@ export namespace diff {
 	    removed: number;
 	    unchanged: number;
 	    summary: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new DiffResult(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.diffs = this.convertValues(source["diffs"], DiffLine);
@@ -214,11 +214,11 @@ export namespace main {
 	    ignore_case: boolean;
 	    ignore_whitespace: boolean;
 	    trim_trailing: boolean;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new DiffRequest(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.text_a = source["text_a"];
@@ -358,11 +358,11 @@ export namespace models {
 	    remediation: string;
 	    // Go type: time
 	    created_at: any;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new AuditResult(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -406,11 +406,11 @@ export namespace models {
 	    enabled: boolean;
 	    // Go type: time
 	    created_at: any;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new AuditRule(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
