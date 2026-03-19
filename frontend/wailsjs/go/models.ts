@@ -1,29 +1,33 @@
 export namespace audit {
-	
+
 	export class AuditReport {
 	    device_id: string;
 	    device_ip: string;
+	    device_hostname: string;
 	    total_rules: number;
 	    passed: number;
 	    failed: number;
 	    score: number;
 	    results: models.AuditResult[];
+	    remediation: string;
 	    // Go type: time
 	    created_at: any;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new AuditReport(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.device_id = source["device_id"];
 	        this.device_ip = source["device_ip"];
+	        this.device_hostname = source["device_hostname"];
 	        this.total_rules = source["total_rules"];
 	        this.passed = source["passed"];
 	        this.failed = source["failed"];
 	        this.score = source["score"];
 	        this.results = this.convertValues(source["results"], models.AuditResult);
+	        this.remediation = source["remediation"];
 	        this.created_at = this.convertValues(source["created_at"], null);
 	    }
 	
@@ -73,17 +77,19 @@ export namespace diff {
 	    added: number;
 	    removed: number;
 	    unchanged: number;
-	
+	    summary: string;
+
 	    static createFrom(source: any = {}) {
 	        return new DiffResult(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.diffs = this.convertValues(source["diffs"], DiffLine);
 	        this.added = source["added"];
 	        this.removed = source["removed"];
 	        this.unchanged = source["unchanged"];
+	        this.summary = source["summary"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -206,17 +212,21 @@ export namespace main {
 	    text_b: string;
 	    ignore_patterns: string[];
 	    ignore_case: boolean;
-	
+	    ignore_whitespace: boolean;
+	    trim_trailing: boolean;
+
 	    static createFrom(source: any = {}) {
 	        return new DiffRequest(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.text_a = source["text_a"];
 	        this.text_b = source["text_b"];
 	        this.ignore_patterns = source["ignore_patterns"];
 	        this.ignore_case = source["ignore_case"];
+	        this.ignore_whitespace = source["ignore_whitespace"];
+	        this.trim_trailing = source["trim_trailing"];
 	    }
 	}
 	export class PlaybookRunRequest {
@@ -345,13 +355,14 @@ export namespace models {
 	    passed: boolean;
 	    details: string;
 	    severity: string;
+	    remediation: string;
 	    // Go type: time
 	    created_at: any;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new AuditResult(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -361,6 +372,7 @@ export namespace models {
 	        this.passed = source["passed"];
 	        this.details = source["details"];
 	        this.severity = source["severity"];
+	        this.remediation = source["remediation"];
 	        this.created_at = this.convertValues(source["created_at"], null);
 	    }
 	
@@ -390,14 +402,15 @@ export namespace models {
 	    must_match: boolean;
 	    vendor: string;
 	    severity: string;
+	    remediation: string;
 	    enabled: boolean;
 	    // Go type: time
 	    created_at: any;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new AuditRule(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -407,6 +420,7 @@ export namespace models {
 	        this.must_match = source["must_match"];
 	        this.vendor = source["vendor"];
 	        this.severity = source["severity"];
+	        this.remediation = source["remediation"];
 	        this.enabled = source["enabled"];
 	        this.created_at = this.convertValues(source["created_at"], null);
 	    }

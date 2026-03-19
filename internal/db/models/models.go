@@ -106,23 +106,25 @@ type AuditRule struct {
 	ID          string    `json:"id" gorm:"primaryKey"`
 	Name        string    `json:"name" gorm:"not null"`
 	Description string    `json:"description"`
-	Pattern     string    `json:"pattern" gorm:"not null"` // regex
-	MustMatch   bool      `json:"must_match"` // true=must be present, false=must be absent
-	Vendor      string    `json:"vendor"` // empty=all vendors
-	Severity    string    `json:"severity"` // critical|high|medium|low
+	Pattern     string    `json:"pattern" gorm:"not null"`       // regex (supports "pattern1 AND pattern2" for multi-line blocks)
+	MustMatch   bool      `json:"must_match"`                    // true=must be present, false=must be absent
+	Vendor      string    `json:"vendor"`                        // empty=all vendors
+	Severity    string    `json:"severity"`                      // critical|high|medium|low
+	Remediation string    `json:"remediation"`                   // CLI commands to fix (template with {{hostname}}, {{ip}})
 	Enabled     bool      `json:"enabled" gorm:"default:true"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
 type AuditResult struct {
-	ID         string    `json:"id" gorm:"primaryKey"`
-	DeviceID   string    `json:"device_id" gorm:"index"`
-	RuleID     string    `json:"rule_id"`
-	RuleName   string    `json:"rule_name"`
-	Passed     bool      `json:"passed"`
-	Details    string    `json:"details"`
-	Severity   string    `json:"severity"`
-	CreatedAt  time.Time `json:"created_at"`
+	ID          string    `json:"id" gorm:"primaryKey"`
+	DeviceID    string    `json:"device_id" gorm:"index"`
+	RuleID      string    `json:"rule_id"`
+	RuleName    string    `json:"rule_name"`
+	Passed      bool      `json:"passed"`
+	Details     string    `json:"details"`
+	Severity    string    `json:"severity"`
+	Remediation string    `json:"remediation"` // generated CLI fix for this specific failure
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type Playbook struct {

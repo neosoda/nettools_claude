@@ -825,8 +825,6 @@ type BackupRequest struct {
 }
 
 func (a *App) RunBackup(req BackupRequest) ([]models.Backup, error) {
-	var results []models.Backup
-
 	configType := req.ConfigType
 	if configType == "" {
 		configType = "running"
@@ -862,12 +860,14 @@ func (a *App) RunBackup(req BackupRequest) ([]models.Backup, error) {
 		}
 	}
 
+	// Build backup requests with credential resolution
+	var backupReqs []backup.BackupRequest
+	var failedResults []models.Backup
 	for _, device := range devices {
 		if device.SSHPort == 0 {
 			device.SSHPort = 22
 		}
 
-		// Credential priority: inline username > device credential > global credential
 		var username, password, privateKey string
 		if req.Username != "" {
 			username = req.Username
@@ -882,7 +882,7 @@ func (a *App) RunBackup(req BackupRequest) ([]models.Backup, error) {
 			if err != nil {
 				errMsg := fmt.Sprintf("credentials manquants pour %s: %v", device.IP, err)
 				logger.Error(errMsg, err)
-				results = append(results, models.Backup{
+				failedResults = append(failedResults, models.Backup{
 					DeviceID:     device.ID,
 					Status:       "failed",
 					ErrorMessage: errMsg,
@@ -904,37 +904,89 @@ func (a *App) RunBackup(req BackupRequest) ([]models.Backup, error) {
 			"message":   fmt.Sprintf("Connexion SSH à %s...", device.IP),
 		})
 
-		ctx, cancel := context.WithTimeout(a.ctx, 120*time.Second)
-		result, err := a.backupMgr.Run(ctx, backup.BackupRequest{
+		backupReqs = append(backupReqs, backup.BackupRequest{
 			Device:     device,
 			ConfigType: configType,
 			Username:   username,
 			Password:   password,
 			PrivateKey: privateKey,
 		})
-		cancel()
+	}
 
-		if result != nil {
-			results = append(results, *result)
-		}
+	// Run backups concurrently (5 workers by default)
+	ctx, cancel := context.WithTimeout(a.ctx, 10*time.Minute)
+	defer cancel()
 
+	start := time.Now()
+	concurrentResults := a.backupMgr.RunConcurrent(ctx, backupReqs, 5, func(br backup.BackupResult, done, total int) {
 		status := "success"
 		errMsg := ""
-		if err != nil {
-			status = "failed"
-			errMsg = err.Error()
+		deviceIP := ""
+		deviceID := ""
+		if br.Backup != nil {
+			deviceID = br.Backup.DeviceID
+			if br.Backup.Status == "failed" {
+				status = "failed"
+				errMsg = br.Backup.ErrorMessage
+			}
 		}
+		if br.Error != nil {
+			status = "failed"
+			errMsg = br.Error.Error()
+		}
+
+		// Find device IP for the event
+		for _, d := range devices {
+			if d.ID == deviceID {
+				deviceIP = d.IP
+				break
+			}
+		}
+
 		runtime.EventsEmit(a.ctx, "backup:progress", map[string]interface{}{
-			"device_id": device.ID,
-			"device_ip": device.IP,
+			"device_id": deviceID,
+			"device_ip": deviceIP,
 			"status":    status,
 			"error":     errMsg,
+			"done":      done,
+			"total":     total,
+			"percent":   done * 100 / total,
 		})
+	})
 
-		logger.AuditAction(a.ctx, "backup", "device", device.ID,
-			fmt.Sprintf(`{"ip":"%s","config_type":"%s","result":"%s"}`, device.IP, configType, status),
-			status, 0)
+	// Collect results
+	var results []models.Backup
+	results = append(results, failedResults...)
+	for _, br := range concurrentResults {
+		if br.Backup != nil {
+			results = append(results, *br.Backup)
+		}
+		status := "success"
+		if br.Error != nil {
+			status = "failed"
+		}
+		deviceIP := ""
+		deviceID := ""
+		if br.Backup != nil {
+			deviceID = br.Backup.DeviceID
+		}
+		for _, d := range devices {
+			if d.ID == deviceID {
+				deviceIP = d.IP
+				break
+			}
+		}
+		logger.AuditAction(a.ctx, "backup", "device", deviceID,
+			fmt.Sprintf(`{"ip":"%s","config_type":"%s","result":"%s"}`, deviceIP, configType, status),
+			status, time.Since(start).Milliseconds())
 	}
+
+	runtime.EventsEmit(a.ctx, "backup:complete", map[string]interface{}{
+		"total":    len(results),
+		"success":  countStatus(results, "success"),
+		"failed":   countStatus(results, "failed"),
+		"duration": time.Since(start).Milliseconds(),
+	})
 
 	return results, nil
 }
@@ -1044,16 +1096,20 @@ func (a *App) RunTerminalCommand(deviceID string, command string) (string, error
 
 // DiffRequest is the input for a diff operation
 type DiffRequest struct {
-	TextA          string   `json:"text_a"`
-	TextB          string   `json:"text_b"`
-	IgnorePatterns []string `json:"ignore_patterns"`
-	IgnoreCase     bool     `json:"ignore_case"`
+	TextA            string   `json:"text_a"`
+	TextB            string   `json:"text_b"`
+	IgnorePatterns   []string `json:"ignore_patterns"`
+	IgnoreCase       bool     `json:"ignore_case"`
+	IgnoreWhitespace bool     `json:"ignore_whitespace"`
+	TrimTrailing     bool     `json:"trim_trailing"`
 }
 
 func (a *App) CompareDiff(req DiffRequest) (*diff.DiffResult, error) {
 	return diff.Compare(req.TextA, req.TextB, diff.CompareOptions{
-		IgnorePatterns: req.IgnorePatterns,
-		IgnoreCase:     req.IgnoreCase,
+		IgnorePatterns:   req.IgnorePatterns,
+		IgnoreCase:       req.IgnoreCase,
+		IgnoreWhitespace: req.IgnoreWhitespace,
+		TrimTrailing:     req.TrimTrailing,
 	})
 }
 
@@ -1458,7 +1514,8 @@ func (a *App) runScheduledJob(ctx context.Context, jobType string, payload map[s
 	case "backup":
 		deviceIDs := extractStringSlice(payload, "device_ids")
 		configType := extractString(payload, "config_type", "running")
-		_, err = a.RunBackup(BackupRequest{DeviceIDs: deviceIDs, ConfigType: configType})
+		credID := extractString(payload, "credential_id", "")
+		_, err = a.RunBackup(BackupRequest{DeviceIDs: deviceIDs, ConfigType: configType, CredentialID: credID})
 	case "scan":
 		cidr := extractString(payload, "cidr", "")
 		credID := extractString(payload, "credential_id", "")
@@ -1466,6 +1523,21 @@ func (a *App) runScheduledJob(ctx context.Context, jobType string, payload map[s
 			err = fmt.Errorf("scan job missing cidr")
 		} else {
 			_, err = a.ScanNetwork(ScanRequest{CIDR: cidr, CredentialID: credID})
+		}
+	case "audit":
+		deviceIDs := extractStringSlice(payload, "device_ids")
+		if len(deviceIDs) == 0 {
+			err = fmt.Errorf("audit job missing device_ids")
+		} else {
+			_, err = a.RunAudit(deviceIDs)
+		}
+	case "playbook":
+		playbookID := extractString(payload, "playbook_id", "")
+		deviceIDs := extractStringSlice(payload, "device_ids")
+		if playbookID == "" || len(deviceIDs) == 0 {
+			err = fmt.Errorf("playbook job missing playbook_id or device_ids")
+		} else {
+			_, err = a.RunPlaybook(PlaybookRunRequest{PlaybookID: playbookID, DeviceIDs: deviceIDs})
 		}
 	default:
 		err = fmt.Errorf("unknown job type: %s", jobType)
@@ -1479,6 +1551,16 @@ func (a *App) runScheduledJob(ctx context.Context, jobType string, payload map[s
 	}
 	logger.AuditAction(a.ctx, "scheduled_job_end", "scheduler", jobType, details, status, time.Since(start).Milliseconds())
 	return err
+}
+
+func countStatus(backups []models.Backup, status string) int {
+	n := 0
+	for _, b := range backups {
+		if b.Status == status {
+			n++
+		}
+	}
+	return n
 }
 
 func extractString(m map[string]interface{}, key, def string) string {
