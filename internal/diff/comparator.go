@@ -13,6 +13,7 @@ type DiffResult struct {
 	Added     int        `json:"added"`
 	Removed   int        `json:"removed"`
 	Unchanged int        `json:"unchanged"`
+	Summary   string     `json:"summary"`
 }
 
 type DiffLine struct {
@@ -23,26 +24,53 @@ type DiffLine struct {
 }
 
 type CompareOptions struct {
-	IgnorePatterns []string // regex patterns to ignore
-	IgnoreCase     bool
+	IgnorePatterns    []string // regex patterns for lines to exclude entirely
+	IgnoreCase        bool     // case-insensitive comparison
+	IgnoreWhitespace  bool     // normalize whitespace differences
+	TrimTrailing      bool     // trim trailing whitespace on each line
 }
 
 // Compare performs a line-based diff between two texts
 func Compare(textA, textB string, opts CompareOptions) (*DiffResult, error) {
-	if opts.IgnoreCase {
-		textA = strings.ToLower(textA)
-		textB = strings.ToLower(textB)
+	// Normalize line endings
+	textA = strings.ReplaceAll(textA, "\r\n", "\n")
+	textB = strings.ReplaceAll(textB, "\r\n", "\n")
+	textA = strings.ReplaceAll(textA, "\r", "\n")
+	textB = strings.ReplaceAll(textB, "\r", "\n")
+
+	// Split into lines for processing
+	linesA := strings.Split(textA, "\n")
+	linesB := strings.Split(textB, "\n")
+
+	// Apply trim trailing whitespace
+	if opts.TrimTrailing {
+		linesA = trimLines(linesA)
+		linesB = trimLines(linesB)
 	}
 
 	// Apply ignore patterns
-	linesA := applyIgnore(strings.Split(textA, "\n"), opts.IgnorePatterns)
-	linesB := applyIgnore(strings.Split(textB, "\n"), opts.IgnorePatterns)
+	linesA = applyIgnore(linesA, opts.IgnorePatterns)
+	linesB = applyIgnore(linesB, opts.IgnorePatterns)
+
+	// Normalize whitespace: collapse multiple spaces/tabs to single space
+	if opts.IgnoreWhitespace {
+		linesA = normalizeWhitespace(linesA)
+		linesB = normalizeWhitespace(linesB)
+	}
+
+	// Apply case-insensitive comparison
+	if opts.IgnoreCase {
+		linesA = toLowerLines(linesA)
+		linesB = toLowerLines(linesB)
+	}
 
 	cleanA := strings.Join(linesA, "\n")
 	cleanB := strings.Join(linesB, "\n")
 
 	dmp := diffmatchpatch.New()
-	diffs := dmp.DiffMain(cleanA, cleanB, true)
+	runesA, runesB, lineArray := dmp.DiffLinesToRunes(cleanA, cleanB)
+	diffs := dmp.DiffMainRunes(runesA, runesB, false)
+	diffs = dmp.DiffCharsToLines(diffs, lineArray)
 	diffs = dmp.DiffCleanupSemantic(diffs)
 
 	result := &DiffResult{}
@@ -56,28 +84,25 @@ func Compare(textA, textB string, opts CompareOptions) (*DiffResult, error) {
 			lines = lines[:len(lines)-1]
 		}
 		for _, line := range lines {
-			var diffType string
 			switch d.Type {
 			case diffmatchpatch.DiffEqual:
-				diffType = "equal"
 				result.Unchanged++
-				result.Diffs = append(result.Diffs, DiffLine{Type: diffType, Content: line, LineA: lineA, LineB: lineB})
+				result.Diffs = append(result.Diffs, DiffLine{Type: "equal", Content: line, LineA: lineA, LineB: lineB})
 				lineA++
 				lineB++
 			case diffmatchpatch.DiffInsert:
-				diffType = "insert"
 				result.Added++
-				result.Diffs = append(result.Diffs, DiffLine{Type: diffType, Content: line, LineB: lineB})
+				result.Diffs = append(result.Diffs, DiffLine{Type: "insert", Content: line, LineB: lineB})
 				lineB++
 			case diffmatchpatch.DiffDelete:
-				diffType = "delete"
 				result.Removed++
-				result.Diffs = append(result.Diffs, DiffLine{Type: diffType, Content: line, LineA: lineA})
+				result.Diffs = append(result.Diffs, DiffLine{Type: "delete", Content: line, LineA: lineA})
 				lineA++
 			}
 		}
 	}
 
+	result.Summary = fmt.Sprintf("+%d -%d =%d lines", result.Added, result.Removed, result.Unchanged)
 	return result, nil
 }
 
@@ -108,7 +133,27 @@ func applyIgnore(lines []string, patterns []string) []string {
 	return result
 }
 
-// Summary returns a human-readable summary of the diff
-func (r *DiffResult) Summary() string {
-	return fmt.Sprintf("+%d -%d =%d lines", r.Added, r.Removed, r.Unchanged)
+func trimLines(lines []string) []string {
+	result := make([]string, len(lines))
+	for i, line := range lines {
+		result[i] = strings.TrimRight(line, " \t")
+	}
+	return result
+}
+
+func normalizeWhitespace(lines []string) []string {
+	wsRe := regexp.MustCompile(`\s+`)
+	result := make([]string, len(lines))
+	for i, line := range lines {
+		result[i] = strings.TrimSpace(wsRe.ReplaceAllString(line, " "))
+	}
+	return result
+}
+
+func toLowerLines(lines []string) []string {
+	result := make([]string, len(lines))
+	for i, line := range lines {
+		result[i] = strings.ToLower(line)
+	}
+	return result
 }

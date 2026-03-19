@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Play, Plus, Trash2 } from 'lucide-react'
+import { Play, Plus, Trash2, Copy, CheckCircle, ChevronDown, ChevronRight, FileText } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import Button from '../components/Button'
 import Modal from '../components/Modal'
@@ -23,13 +23,15 @@ export default function AuditPage() {
   const [editRule, setEditRule] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<'run' | 'rules'>('run')
   const [showRuleFilter, setShowRuleFilter] = useState(true)
+  const [expandedReports, setExpandedReports] = useState<Record<string, boolean>>({})
+  const [showRemediation, setShowRemediation] = useState<string | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
   const { data: rules = [] } = useQuery({
     queryKey: ['audit-rules'],
     queryFn: async () => { const m = await getBackend(); return m.GetAuditRules() },
   } as any)
 
-  // Auto-select all rules on load
   useEffect(() => {
     const ruleList = rules as any[]
     if (ruleList.length > 0 && selectedRules.length === 0) {
@@ -37,7 +39,6 @@ export default function AuditPage() {
     }
   }, [rules])
 
-  // Load last scan devices
   useEffect(() => {
     if (deviceSource === 'last_scan') {
       getBackend().then(m => m.GetLastScanDevices()).then(devs => {
@@ -50,7 +51,6 @@ export default function AuditPage() {
     }
   }, [deviceSource])
 
-  // For manual mode: build ephemeral device list from IPs
   const manualIPs = manualIpText.split(/[\n,;]+/).map((s: string) => s.trim()).filter(Boolean)
 
   const auditMutation = useMutation({
@@ -61,7 +61,6 @@ export default function AuditPage() {
 
       let deviceIDs = selectedDevices
       if (deviceSource === 'manual') {
-        // Resolve IPs to device IDs (auto-created by previous backups/scans)
         const found = await m.GetDevicesByIPs(manualIPs)
         deviceIDs = (found || []).map((d: any) => d.id)
       }
@@ -82,33 +81,62 @@ export default function AuditPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['audit-rules'] }),
   })
 
+  const handleCopyRemediation = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedId(id)
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch {
+      // Fallback for Wails
+      const el = document.createElement('textarea')
+      el.value = text
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+      setCopiedId(id)
+      setTimeout(() => setCopiedId(null), 2000)
+    }
+  }
+
   const severityOpts = [
-    { value: 'critical', label: 'Critique' }, { value: 'high', label: 'Élevé' },
+    { value: 'critical', label: 'Critique' }, { value: 'high', label: 'Eleve' },
     { value: 'medium', label: 'Moyen' }, { value: 'low', label: 'Faible' },
   ]
   const vendorOpts = [
     { value: '', label: 'Tous' }, { value: 'cisco', label: 'Cisco' },
-    { value: 'aruba', label: 'Aruba' }, { value: 'allied', label: 'Allied' },
+    { value: 'aruba', label: 'Aruba' }, { value: 'hp', label: 'HP' },
+    { value: 'hpe', label: 'HPE' }, { value: 'allied', label: 'Allied Telesis' },
   ]
 
   const allRulesSelected = selectedRules.length === (rules as any[]).length
   const canAudit = deviceSource === 'manual' ? manualIPs.length > 0 : selectedDevices.length > 0
 
+  const toggleReport = (id: string) => setExpandedReports(prev => ({ ...prev, [id]: !prev[id] }))
+
+  const severityColor = (s: string) => {
+    switch (s) {
+      case 'critical': return 'bg-red-900/30 border-red-800 text-red-400'
+      case 'high': return 'bg-orange-900/30 border-orange-800 text-orange-400'
+      case 'medium': return 'bg-yellow-900/30 border-yellow-800 text-yellow-400'
+      default: return 'bg-slate-800 border-slate-700 text-slate-400'
+    }
+  }
+
   return (
     <div className="flex flex-col h-full">
-      <PageHeader title="Audit de conformité"
+      <PageHeader title="Audit de conformite"
         actions={<div className="flex gap-2">
           <Button size="sm" variant={activeTab === 'run' ? 'primary' : 'secondary'} onClick={() => setActiveTab('run')}>Audit</Button>
-          <Button size="sm" variant={activeTab === 'rules' ? 'primary' : 'secondary'} onClick={() => setActiveTab('rules')}>Règles</Button>
+          <Button size="sm" variant={activeTab === 'rules' ? 'primary' : 'secondary'} onClick={() => setActiveTab('rules')}>Regles</Button>
         </div>}
       />
       <div className="flex-1 overflow-auto p-6 space-y-4">
         {activeTab === 'run' ? (
           <>
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-              {/* Device source selector */}
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-300">Équipements à auditer</h2>
+                <h2 className="text-sm font-semibold text-slate-300">Equipements a auditer</h2>
                 <div className="flex gap-1 bg-slate-800 rounded-lg p-0.5">
                   {(['last_scan', 'manual'] as DeviceSource[]).map(mode => (
                     <button key={mode} onClick={() => setDeviceSource(mode)}
@@ -122,10 +150,10 @@ export default function AuditPage() {
               {deviceSource === 'last_scan' && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs text-slate-500">{selectedDevices.length} équipement(s) sélectionné(s)</p>
+                    <p className="text-xs text-slate-500">{selectedDevices.length} equipement(s) selectionne(s)</p>
                     <button onClick={() => setSelectedDevices(selectedDevices.length === lastScanDevices.length ? [] : lastScanDevices.map((d: any) => d.id))}
                       className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
-                      {selectedDevices.length === lastScanDevices.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+                      {selectedDevices.length === lastScanDevices.length ? 'Tout deselectionner' : 'Tout selectionner'}
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -137,7 +165,7 @@ export default function AuditPage() {
                       </button>
                     ))}
                     {lastScanDevices.length === 0 && (
-                      <p className="text-xs text-amber-400">Aucun équipement dans le dernier scan. Lancez une découverte réseau d'abord.</p>
+                      <p className="text-xs text-amber-400">Aucun equipement dans le dernier scan. Lancez une decouverte reseau d'abord.</p>
                     )}
                   </div>
                 </div>
@@ -146,7 +174,7 @@ export default function AuditPage() {
               {deviceSource === 'manual' && (
                 <div>
                   <label className="text-xs font-medium text-slate-400 block mb-1">
-                    Liste d'IPs (une par ligne ou séparées par virgule)
+                    Liste d'IPs (une par ligne ou separees par virgule)
                   </label>
                   <textarea value={manualIpText} onChange={e => setManualIpText(e.target.value)}
                     placeholder={"10.113.76.1\n10.113.76.2"}
@@ -163,18 +191,18 @@ export default function AuditPage() {
                 <div className="flex items-center justify-between mb-2">
                   <button onClick={() => setShowRuleFilter(v => !v)}
                     className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-200 transition-colors">
-                    <span className={`transition-transform ${showRuleFilter ? 'rotate-90' : ''}`}>▶</span>
-                    Règles appliquées ({selectedRules.length}/{(rules as any[]).length})
+                    <span className={`transition-transform ${showRuleFilter ? 'rotate-90' : ''}`}>&#9654;</span>
+                    Regles appliquees ({selectedRules.length}/{(rules as any[]).length})
                     {!allRulesSelected && (
                       <span className="ml-1 px-1.5 py-0.5 bg-amber-900/30 border border-amber-700 rounded text-amber-400 text-xs">
-                        Filtrées
+                        Filtrees
                       </span>
                     )}
                   </button>
                   {showRuleFilter && (
                     <button onClick={() => setSelectedRules(allRulesSelected ? [] : (rules as any[]).map((r: any) => r.id))}
                       className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
-                      {allRulesSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
+                      {allRulesSelected ? 'Tout deselectionner' : 'Tout selectionner'}
                     </button>
                   )}
                 </div>
@@ -199,7 +227,7 @@ export default function AuditPage() {
                       </label>
                     ))}
                     {(rules as any[]).length === 0 && (
-                      <p className="text-xs text-slate-500 italic">Aucune règle configurée. Créez des règles dans l'onglet "Règles".</p>
+                      <p className="text-xs text-slate-500 italic">Aucune regle configuree. Creez des regles dans l'onglet "Regles".</p>
                     )}
                   </div>
                 )}
@@ -209,63 +237,135 @@ export default function AuditPage() {
                 disabled={!canAudit || selectedRules.length === 0}
                 onClick={() => auditMutation.mutate()}>
                 <Play className="w-4 h-4" /> Auditer
-                {!allRulesSelected && ` — ${selectedRules.length} règles`}
+                {!allRulesSelected && ` — ${selectedRules.length} regles`}
               </Button>
             </div>
 
-            {reports.map((report: any) => (
-              <div key={report.device_id} className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-                <div className="px-5 py-3 border-b border-slate-800 flex justify-between items-center">
-                  <div>
-                    <span className="font-medium text-white">{report.device_ip}</span>
-                    {report.total_rules > 0
-                      ? <span className="ml-3 text-sm text-slate-400">{report.passed}/{report.total_rules} règles</span>
-                      : <span className="ml-3 text-sm text-amber-400">Aucun backup disponible</span>
-                    }
-                  </div>
-                  {report.total_rules > 0 && (
+            {/* Audit reports */}
+            {reports.map((report: any) => {
+              const isExpanded = expandedReports[report.device_id] !== false
+              const hasRemediation = report.remediation && report.remediation.length > 0
+              const failedResults = (report.results || []).filter((r: any) => !r.passed)
+
+              return (
+                <div key={report.device_id} className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+                  <div className="px-5 py-3 border-b border-slate-800 flex justify-between items-center cursor-pointer hover:bg-slate-800/30 transition-colors"
+                    onClick={() => toggleReport(report.device_id)}>
                     <div className="flex items-center gap-3">
-                      <div className="w-32 h-2 bg-slate-800 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full transition-all ${report.score >= 80 ? 'bg-green-500' : report.score >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                          style={{ width: `${report.score}%` }} />
+                      {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
+                      <div>
+                        <span className="font-medium text-white">{report.device_hostname || report.device_ip}</span>
+                        <span className="text-xs text-slate-500 ml-2">{report.device_ip}</span>
+                        {report.total_rules > 0
+                          ? <span className="ml-3 text-sm text-slate-400">{report.passed}/{report.total_rules} regles</span>
+                          : <span className="ml-3 text-sm text-amber-400">Aucun backup disponible</span>
+                        }
                       </div>
-                      <span className={`text-lg font-bold ${report.score >= 80 ? 'text-green-400' : report.score >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
-                        {Math.round(report.score)}%
-                      </span>
                     </div>
+                    <div className="flex items-center gap-3">
+                      {hasRemediation && (
+                        <Button size="sm" variant="ghost" onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation()
+                          setShowRemediation(report.device_id)
+                        }} title="Script de remediation">
+                          <FileText className="w-3.5 h-3.5 text-amber-400" />
+                        </Button>
+                      )}
+                      {report.total_rules > 0 && (
+                        <>
+                          <div className="w-32 h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all ${report.score >= 80 ? 'bg-green-500' : report.score >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                              style={{ width: `${report.score}%` }} />
+                          </div>
+                          <span className={`text-lg font-bold tabular-nums ${report.score >= 80 ? 'text-green-400' : report.score >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+                            {Math.round(report.score)}%
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <>
+                      {report.total_rules === 0 ? (
+                        <div className="p-4 text-sm text-slate-500">
+                          Aucune configuration sauvegardee pour cet equipement. Effectuez un backup avant de lancer l'audit.
+                        </div>
+                      ) : (
+                        <div className="p-4 space-y-2">
+                          {(report.results || []).map((r: any) => (
+                            <div key={r.id} className={`flex items-start gap-3 p-3 rounded-lg ${r.passed ? 'bg-green-900/10' : 'bg-red-900/10'}`}>
+                              <span className={`mt-0.5 ${r.passed ? 'text-green-400' : 'text-red-400'}`}>
+                                {r.passed ? <CheckCircle className="w-4 h-4" /> : '✗'}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-slate-200">{r.rule_name}</p>
+                                {r.details && <p className="text-xs text-slate-500 mt-0.5">{r.details}</p>}
+                                {/* Inline remediation for individual failed rules */}
+                                {!r.passed && r.remediation && (
+                                  <div className="mt-2 bg-slate-800/50 rounded p-2 border border-slate-700/50">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-xs text-amber-400 font-medium">Remediation suggeree:</span>
+                                      <button onClick={() => handleCopyRemediation(r.remediation, r.id)}
+                                        className="text-xs text-slate-500 hover:text-blue-400 transition-colors flex items-center gap-1">
+                                        {copiedId === r.id ? <><CheckCircle className="w-3 h-3 text-green-400" /> Copie!</> : <><Copy className="w-3 h-3" /> Copier</>}
+                                      </button>
+                                    </div>
+                                    <pre className="text-xs text-slate-300 font-mono whitespace-pre-wrap">{r.remediation}</pre>
+                                  </div>
+                                )}
+                              </div>
+                              <span className={`text-xs px-1.5 py-0.5 rounded border shrink-0 ${severityColor(r.severity)}`}>
+                                {r.severity}
+                              </span>
+                            </div>
+                          ))}
+
+                          {/* Summary: failed rules count */}
+                          {failedResults.length > 0 && (
+                            <div className="pt-2 border-t border-slate-800 text-xs text-slate-500">
+                              {failedResults.length} non-conformite(s) detectee(s) — {failedResults.filter((r: any) => r.severity === 'critical').length} critique(s)
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
-                {report.total_rules === 0 ? (
-                  <div className="p-4 text-sm text-slate-500">
-                    Aucune configuration sauvegardée pour cet équipement. Effectuez un backup avant de lancer l'audit.
+              )
+            })}
+
+            {/* Full remediation script modal */}
+            {reports.map((report: any) => (
+              <Modal key={`rem-${report.device_id}`}
+                open={showRemediation === report.device_id}
+                onClose={() => setShowRemediation(null)}
+                title={`Script de remediation — ${report.device_hostname || report.device_ip}`}
+                size="xl">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-slate-400">
+                      Script CLI pret a l'emploi pour corriger les {report.failed} manquements detectes
+                    </p>
+                    <Button size="sm" variant="secondary"
+                      onClick={() => handleCopyRemediation(report.remediation, `full-${report.device_id}`)}>
+                      {copiedId === `full-${report.device_id}`
+                        ? <><CheckCircle className="w-3.5 h-3.5 text-green-400" /> Copie!</>
+                        : <><Copy className="w-3.5 h-3.5" /> Copier le script</>}
+                    </Button>
                   </div>
-                ) : (
-                  <div className="p-4 space-y-2">
-                    {(report.results || []).map((r: any) => (
-                      <div key={r.id} className={`flex items-center gap-3 p-2 rounded ${r.passed ? 'bg-green-900/10' : 'bg-red-900/10'}`}>
-                        <span className={r.passed ? 'text-green-400' : 'text-red-400'}>{r.passed ? '✓' : '✗'}</span>
-                        <div className="flex-1">
-                          <p className="text-sm text-slate-200">{r.rule_name}</p>
-                          {r.details && <p className="text-xs text-slate-500">{r.details}</p>}
-                        </div>
-                        <span className={`text-xs px-1.5 py-0.5 rounded border ${
-                          r.severity === 'critical' ? 'bg-red-900/30 border-red-800 text-red-400' :
-                          r.severity === 'high' ? 'bg-orange-900/30 border-orange-800 text-orange-400' :
-                          'bg-slate-800 border-slate-700 text-slate-400'}`}>
-                          {r.severity}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                  <pre className="text-xs text-green-300 bg-black p-4 rounded-lg overflow-auto max-h-[60vh] font-mono border border-slate-800">
+                    {report.remediation}
+                  </pre>
+                </div>
+              </Modal>
             ))}
           </>
         ) : (
           <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
             <div className="px-5 py-3 border-b border-slate-800 flex justify-between items-center">
-              <h2 className="text-sm font-semibold text-slate-300">Règles ({(rules as any[]).length})</h2>
-              <Button size="sm" variant="primary" onClick={() => { setEditRule({ must_match: true, severity: 'high', enabled: true }); setShowRuleModal(true) }}>
+              <h2 className="text-sm font-semibold text-slate-300">Regles ({(rules as any[]).length})</h2>
+              <Button size="sm" variant="primary" onClick={() => { setEditRule({ must_match: true, severity: 'high', enabled: true, remediation: '' }); setShowRuleModal(true) }}>
                 <Plus className="w-3.5 h-3.5" /> Ajouter
               </Button>
             </div>
@@ -273,7 +373,8 @@ export default function AuditPage() {
               <thead>
                 <tr className="text-slate-400 border-b border-slate-800">
                   <th className="text-left p-3">Nom</th><th className="text-left p-3">Pattern</th>
-                  <th className="text-left p-3">Type</th><th className="text-left p-3">Sévérité</th>
+                  <th className="text-left p-3">Type</th><th className="text-left p-3">Severite</th>
+                  <th className="text-left p-3">Remediation</th>
                   <th className="text-left p-3">Actions</th>
                 </tr>
               </thead>
@@ -281,15 +382,20 @@ export default function AuditPage() {
                 {(rules as any[]).map((rule: any) => (
                   <tr key={rule.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
                     <td className="p-3 text-slate-200">{rule.name}</td>
-                    <td className="p-3 font-mono text-xs text-slate-400">{rule.pattern}</td>
-                    <td className="p-3 text-slate-400 text-xs">{rule.must_match ? '✓ Doit contenir' : '✗ Ne doit pas contenir'}</td>
+                    <td className="p-3 font-mono text-xs text-slate-400 max-w-xs truncate">{rule.pattern}</td>
+                    <td className="p-3 text-slate-400 text-xs">{rule.must_match ? 'Doit contenir' : 'Interdit'}</td>
                     <td className="p-3">
-                      <span className={`text-xs px-1.5 py-0.5 rounded border ${rule.severity === 'critical' ? 'bg-red-900/30 border-red-800 text-red-400' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
+                      <span className={`text-xs px-1.5 py-0.5 rounded border ${severityColor(rule.severity)}`}>
                         {rule.severity}
                       </span>
                     </td>
+                    <td className="p-3">
+                      {rule.remediation
+                        ? <span className="text-xs text-green-400">Oui</span>
+                        : <span className="text-xs text-slate-600">—</span>}
+                    </td>
                     <td className="p-3 flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => { setEditRule(rule); setShowRuleModal(true) }}>Éditer</Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setEditRule(rule); setShowRuleModal(true) }}>Editer</Button>
                       <Button size="sm" variant="ghost" onClick={() => deleteRuleMutation.mutate(rule.id)}>
                         <Trash2 className="w-3.5 h-3.5 text-red-400" />
                       </Button>
@@ -302,16 +408,22 @@ export default function AuditPage() {
         )}
       </div>
 
-      <Modal open={showRuleModal} onClose={() => setShowRuleModal(false)} title="Règle d'audit">
+      {/* Rule edit modal with remediation field */}
+      <Modal open={showRuleModal} onClose={() => setShowRuleModal(false)} title="Regle d'audit">
         <form onSubmit={e => { e.preventDefault(); saveRuleMutation.mutate(editRule) }} className="space-y-3">
           <Input label="Nom *" value={editRule?.name || ''} required
             onChange={e => setEditRule((r: any) => ({ ...r, name: e.target.value }))} />
-          <Input label="Pattern (regex) *" value={editRule?.pattern || ''} required
-            onChange={e => setEditRule((r: any) => ({ ...r, pattern: e.target.value }))} />
+          <div>
+            <Input label="Pattern (regex) *" value={editRule?.pattern || ''} required
+              onChange={e => setEditRule((r: any) => ({ ...r, pattern: e.target.value }))} />
+            <p className="text-xs text-slate-500 mt-1">
+              Supporte "pattern1 AND pattern2" pour verification multi-blocs (ex: "ntp server AND ntp authenticate")
+            </p>
+          </div>
           <Input label="Description" value={editRule?.description || ''}
             onChange={e => setEditRule((r: any) => ({ ...r, description: e.target.value }))} />
           <div className="grid grid-cols-2 gap-3">
-            <Select label="Sévérité" value={editRule?.severity || 'high'} options={severityOpts}
+            <Select label="Severite" value={editRule?.severity || 'high'} options={severityOpts}
               onChange={e => setEditRule((r: any) => ({ ...r, severity: e.target.value }))} />
             <Select label="Vendor" value={editRule?.vendor || ''} options={vendorOpts}
               onChange={e => setEditRule((r: any) => ({ ...r, vendor: e.target.value }))} />
@@ -320,6 +432,19 @@ export default function AuditPage() {
             <input type="checkbox" id="must_match" checked={editRule?.must_match ?? true}
               onChange={e => setEditRule((r: any) => ({ ...r, must_match: e.target.checked }))} />
             <label htmlFor="must_match" className="text-sm text-slate-300">La configuration doit contenir ce pattern</label>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-400 block mb-1">
+              Script de remediation (CLI)
+            </label>
+            <textarea value={editRule?.remediation || ''}
+              onChange={e => setEditRule((r: any) => ({ ...r, remediation: e.target.value }))}
+              placeholder={"ntp server 10.0.0.1\nntp authenticate"}
+              className="w-full bg-slate-800 border border-slate-700 rounded-md p-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500 resize-none"
+              rows={4} />
+            <p className="text-xs text-slate-500 mt-1">
+              Variables: {"{{hostname}}"}, {"{{ip}}"}, {"{{vendor}}"}
+            </p>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button onClick={() => setShowRuleModal(false)}>Annuler</Button>

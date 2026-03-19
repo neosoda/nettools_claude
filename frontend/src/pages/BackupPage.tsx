@@ -65,10 +65,20 @@ export default function BackupPage() {
     }
   }, [deviceSource])
 
+  // Completion summary
+  const [backupSummary, setBackupSummary] = useState<any>(null)
+
   // Events
   useEffect(() => {
     const unsub = EventsOn('backup:progress', (data: any) => {
       setBackupProgress(prev => ({ ...prev, [data.device_id]: data }))
+    })
+    return () => unsub()
+  }, [])
+
+  useEffect(() => {
+    const unsub = EventsOn('backup:complete', (data: any) => {
+      setBackupSummary(data)
     })
     return () => unsub()
   }, [])
@@ -244,7 +254,36 @@ export default function BackupPage() {
             <Play className="w-4 h-4" /> Lancer le backup
           </Button>
 
-          {/* Progress summary */}
+          {/* Global progress bar */}
+          {backupMutation.isPending && Object.keys(backupProgress).length > 0 && (() => {
+            const entries = Object.values(backupProgress) as any[]
+            const total = entries[0]?.total || entries.length
+            const done = entries.filter((p: any) => p.status === 'success' || p.status === 'failed').length
+            const pct = total > 0 ? Math.round(done * 100 / total) : 0
+            return (
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-slate-400">
+                  <span>{done}/{total} equipements traites</span>
+                  <span>{pct}%</span>
+                </div>
+                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-500 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Completion summary */}
+          {backupSummary && !backupMutation.isPending && (
+            <div className="flex items-center gap-4 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs">
+              <span className="text-slate-300">Termine:</span>
+              <span className="text-green-400">{backupSummary.success} succes</span>
+              {backupSummary.failed > 0 && <span className="text-red-400">{backupSummary.failed} echecs</span>}
+              <span className="text-slate-500">{backupSummary.duration}ms</span>
+            </div>
+          )}
+
+          {/* Progress per device */}
           {Object.keys(backupProgress).length > 0 && (
             <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800">
               {Object.entries(backupProgress).map(([id, prog]: any) => {
