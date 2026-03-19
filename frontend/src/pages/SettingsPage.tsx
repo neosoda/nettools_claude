@@ -1,19 +1,22 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Save } from 'lucide-react'
+import { Save, Trash2 } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import Button from '../components/Button'
 import Input from '../components/Input'
 import Select from '../components/Select'
 import Modal from '../components/Modal'
+import { useToast } from '../components/Toast'
 
 async function getBackend() { return import('../../wailsjs/go/main/App') }
 
 export default function SettingsPage() {
   const qc = useQueryClient()
+  const { toast } = useToast()
   const [settings, setSettings] = useState<any>(null)
   const [showCredModal, setShowCredModal] = useState(false)
   const [editCred, setEditCred] = useState<any>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
   const { data: fetchedSettings } = useQuery({ queryKey: ['settings'], queryFn: async () => { const m = await getBackend(); return m.GetSettings() } })
   const { data: credentials = [], refetch: refetchCreds } = useQuery({ queryKey: ['credentials'], queryFn: async () => { const m = await getBackend(); return m.GetCredentials() } })
@@ -22,15 +25,18 @@ export default function SettingsPage() {
 
   const saveMutation = useMutation({
     mutationFn: async (s: any) => { const m = await getBackend(); return m.SaveSettings(s) },
-    onSuccess: () => alert('Paramètres sauvegardés'),
+    onSuccess: () => toast('Paramètres sauvegardés', 'success'),
+    onError: (e: any) => toast(`Erreur : ${e?.message || e}`, 'error'),
   })
   const saveCredMutation = useMutation({
     mutationFn: async (cred: any) => { const m = await getBackend(); return m.SaveCredential(cred) },
-    onSuccess: () => { refetchCreds(); setShowCredModal(false) },
+    onSuccess: () => { refetchCreds(); setShowCredModal(false); toast('Credential sauvegardé', 'success') },
+    onError: (e: any) => toast(`Erreur : ${e?.message || e}`, 'error'),
   })
   const deleteCredMutation = useMutation({
     mutationFn: async (id: string) => { const m = await getBackend(); return m.DeleteCredential(id) },
-    onSuccess: () => refetchCreds(),
+    onSuccess: () => { refetchCreds(); setConfirmDelete(null); toast('Credential supprimé', 'success') },
+    onError: (e: any) => toast(`Erreur : ${e?.message || e}`, 'error'),
   })
 
   const themeOpts = [{ value: 'dark', label: 'Sombre' }, { value: 'light', label: 'Clair' }]
@@ -78,7 +84,9 @@ export default function SettingsPage() {
                   <td className="p-3 text-xs">{c.has_snmp_community ? <span className="text-green-400">✓ Community</span> : <span className="text-slate-500">—</span>}</td>
                   <td className="p-3 flex gap-1">
                     <Button size="sm" variant="ghost" onClick={() => { setEditCred(c); setShowCredModal(true) }}>Éditer</Button>
-                    <Button size="sm" variant="ghost" onClick={() => deleteCredMutation.mutate(c.id)}><span className="text-red-400 text-xs">Suppr.</span></Button>
+                    <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(c.id)}>
+                      <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -98,8 +106,27 @@ export default function SettingsPage() {
             <Select label="SNMP" value={editCred?.snmp_version || 'v2c'} options={snmpOpts} onChange={e => setEditCred((c: any) => ({ ...c, snmp_version: e.target.value }))} />
             <Input label="Community SNMP" type="password" value={editCred?.snmp_community || ''} placeholder={editCred?.has_snmp_community ? '(inchangée)' : ''} onChange={e => setEditCred((c: any) => ({ ...c, snmp_community: e.target.value }))} />
           </div>
-          <div className="flex justify-end gap-2 pt-2"><Button onClick={() => setShowCredModal(false)}>Annuler</Button><Button type="submit" variant="primary" loading={saveCredMutation.isPending}>Sauvegarder</Button></div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button onClick={() => setShowCredModal(false)}>Annuler</Button>
+            <Button type="submit" variant="primary" loading={saveCredMutation.isPending}>Sauvegarder</Button>
+          </div>
         </form>
+      </Modal>
+
+      {/* Confirmation suppression */}
+      <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Confirmer la suppression" size="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-slate-300">
+            Voulez-vous vraiment supprimer ce credential ? Cette action est irréversible.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setConfirmDelete(null)}>Annuler</Button>
+            <Button variant="danger" loading={deleteCredMutation.isPending}
+              onClick={() => confirmDelete && deleteCredMutation.mutate(confirmDelete)}>
+              Supprimer
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

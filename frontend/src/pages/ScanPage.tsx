@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { Radio, Play, Square, FileSpreadsheet, Network, Layers, Cpu } from 'lucide-react'
+import { Radio, Play, Square, FileSpreadsheet, Network, Layers, Cpu, Search } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import Button from '../components/Button'
 import Input from '../components/Input'
 import { EventsOn } from '../../wailsjs/runtime/runtime'
 import { useGlobalCredential } from '../context/CredentialContext'
+import { useToast } from '../components/Toast'
 
 async function getBackend() { return import('../../wailsjs/go/main/App') }
 
@@ -29,6 +30,7 @@ type ScanMode = 'switches' | 'full' | 'cidr'
 
 export default function ScanPage() {
   const { globalCredId } = useGlobalCredential()
+  const { toast } = useToast()
   const [scanMode, setScanMode] = useState<ScanMode>('switches')
   const [prefix, setPrefix] = useState('10.113.76')  // base prefix for switches/full modes
   const [cidr, setCidr] = useState('10.113.76.0/24')
@@ -44,6 +46,7 @@ export default function ScanPage() {
   const [testResult, setTestResult] = useState<any>(null)
   const [testing, setTesting] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [searchFilter, setSearchFilter] = useState('')
   const resultDeviceIds = useRef<string[]>([])
 
   useEffect(() => {
@@ -88,8 +91,14 @@ export default function ScanPage() {
       setResults(devs)
       resultDeviceIds.current = devs.map((d: any) => d.id)
       setScanDone(true)
+      if (devs.length > 0) {
+        toast(`${devs.length} équipement(s) découvert(s)`, 'success')
+      } else {
+        toast('Scan terminé — aucun équipement trouvé', 'warning')
+      }
     } catch (e: any) {
       setError(e?.message || String(e))
+      toast('Erreur pendant le scan', 'error')
     } finally {
       setScanning(false)
       setProgress(null)
@@ -250,50 +259,79 @@ export default function ScanPage() {
         )}
 
         {/* Results */}
-        {results.length > 0 && (
-          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-slate-800 flex justify-between items-center">
-              <h2 className="text-sm font-semibold text-slate-300">{results.length} équipements découverts</h2>
-              <Button variant="secondary" size="sm" loading={exporting} onClick={handleExportExcel}>
-                <FileSpreadsheet className="w-4 h-4" /> Exporter Excel
-              </Button>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-slate-400 border-b border-slate-800">
-                    <th className="text-left p-3 font-medium">IP</th>
-                    <th className="text-left p-3 font-medium">Hostname</th>
-                    <th className="text-left p-3 font-medium">MAC</th>
-                    <th className="text-left p-3 font-medium">Fabricant</th>
-                    <th className="text-left p-3 font-medium">Modèle</th>
-                    <th className="text-left p-3 font-medium">Firmware</th>
-                    <th className="text-left p-3 font-medium">Uptime</th>
-                    <th className="text-left p-3 font-medium">Location</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.map((d: any) => (
-                    <tr key={d.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
-                      <td className="p-3 font-mono text-blue-400">{d.ip}</td>
-                      <td className="p-3 text-slate-200">{d.hostname || '—'}</td>
-                      <td className="p-3 font-mono text-xs text-slate-400">{d.mac_address || '—'}</td>
-                      <td className="p-3">
-                        <span className="text-xs bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-slate-300">
-                          {d.vendor || 'unknown'}
-                        </span>
-                      </td>
-                      <td className="p-3 text-slate-400">{d.model || '—'}</td>
-                      <td className="p-3 text-xs text-slate-400 font-mono">{d.os_version || '—'}</td>
-                      <td className="p-3 text-xs text-slate-500">{formatUptime(d.uptime_seconds)}</td>
-                      <td className="p-3 text-slate-500">{d.location || '—'}</td>
+        {results.length > 0 && (() => {
+          const q = searchFilter.toLowerCase()
+          const filtered = q ? results.filter((d: any) =>
+            (d.ip || '').toLowerCase().includes(q) ||
+            (d.hostname || '').toLowerCase().includes(q) ||
+            (d.vendor || '').toLowerCase().includes(q) ||
+            (d.model || '').toLowerCase().includes(q) ||
+            (d.location || '').toLowerCase().includes(q) ||
+            (d.mac_address || '').toLowerCase().includes(q)
+          ) : results
+
+          return (
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+              <div className="px-5 py-3 border-b border-slate-800 flex justify-between items-center gap-3">
+                <h2 className="text-sm font-semibold text-slate-300 shrink-0">
+                  {filtered.length === results.length ? `${results.length} équipements` : `${filtered.length}/${results.length} équipements`}
+                </h2>
+                <div className="flex items-center gap-2 flex-1 max-w-xs">
+                  <div className="relative flex-1">
+                    <Search className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input value={searchFilter} onChange={e => setSearchFilter(e.target.value)}
+                      placeholder="Filtrer..."
+                      className="w-full pl-7 pr-2 py-1.5 bg-slate-800 border border-slate-700 rounded-md text-xs text-slate-200 focus:outline-none focus:border-blue-500" />
+                  </div>
+                </div>
+                <Button variant="secondary" size="sm" loading={exporting} onClick={handleExportExcel}>
+                  <FileSpreadsheet className="w-4 h-4" /> Exporter Excel
+                </Button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-slate-400 border-b border-slate-800">
+                      <th className="text-left p-3 font-medium">IP</th>
+                      <th className="text-left p-3 font-medium">Hostname</th>
+                      <th className="text-left p-3 font-medium">MAC</th>
+                      <th className="text-left p-3 font-medium">Fabricant</th>
+                      <th className="text-left p-3 font-medium">Modèle</th>
+                      <th className="text-left p-3 font-medium">Firmware</th>
+                      <th className="text-left p-3 font-medium">Uptime</th>
+                      <th className="text-left p-3 font-medium">Location</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filtered.map((d: any) => (
+                      <tr key={d.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
+                        <td className="p-3 font-mono text-blue-400">{d.ip}</td>
+                        <td className="p-3 text-slate-200">{d.hostname || '—'}</td>
+                        <td className="p-3 font-mono text-xs text-slate-400">{d.mac_address || '—'}</td>
+                        <td className="p-3">
+                          <span className="text-xs bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-slate-300">
+                            {d.vendor || 'unknown'}
+                          </span>
+                        </td>
+                        <td className="p-3 text-slate-400">{d.model || '—'}</td>
+                        <td className="p-3 text-xs text-slate-400 font-mono">{d.os_version || '—'}</td>
+                        <td className="p-3 text-xs text-slate-500">{formatUptime(d.uptime_seconds)}</td>
+                        <td className="p-3 text-slate-500">{d.location || '—'}</td>
+                      </tr>
+                    ))}
+                    {filtered.length === 0 && (
+                      <tr>
+                        <td colSpan={8} className="text-center py-8 text-slate-500 text-xs">
+                          Aucun résultat pour "{searchFilter}"
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
       </div>
     </div>
   )

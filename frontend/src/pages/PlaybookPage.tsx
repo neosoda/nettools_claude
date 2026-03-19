@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Play, Trash2, FileCode, BookOpen, ChevronDown, ChevronRight, Copy } from 'lucide-react'
+import { Plus, Play, Trash2, FileCode, BookOpen, ChevronDown, ChevronRight, Copy, AlertTriangle } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import Button from '../components/Button'
 import Modal from '../components/Modal'
@@ -154,6 +154,7 @@ export default function PlaybookPage() {
   const [activeTab, setActiveTab] = useState<'playbooks' | 'guide'>('playbooks')
   const [openSection, setOpenSection] = useState<number | null>(0)
   const [copied, setCopied] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
   const { data: playbooks = [] } = useQuery({
     queryKey: ['playbooks'],
@@ -227,7 +228,7 @@ export default function PlaybookPage() {
                       <Play className="w-3.5 h-3.5" /> Run
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => { setEditPb(pb); setShowModal(true) }}>Éditer</Button>
-                    <Button size="sm" variant="ghost" onClick={() => deleteMutation.mutate(pb.id)}>
+                    <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(pb.id)}>
                       <Trash2 className="w-3.5 h-3.5 text-red-400" />
                     </Button>
                   </div>
@@ -343,6 +344,23 @@ steps:
             <Button type="submit" variant="primary" loading={saveMutation.isPending}>Sauvegarder</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Confirm delete */}
+      <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Confirmer la suppression" size="sm">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-sm text-slate-300">Voulez-vous vraiment supprimer ce playbook ? Cette action est irréversible.</p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setConfirmDelete(null)}>Annuler</Button>
+            <Button variant="danger" loading={deleteMutation.isPending}
+              onClick={() => { if (confirmDelete) { deleteMutation.mutate(confirmDelete); setConfirmDelete(null) } }}>
+              Supprimer
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       {/* Run modal */}

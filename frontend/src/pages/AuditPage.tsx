@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Play, Plus, Trash2 } from 'lucide-react'
+import { Play, Plus, Trash2, AlertTriangle } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import Button from '../components/Button'
 import Modal from '../components/Modal'
 import Input from '../components/Input'
 import Select from '../components/Select'
+import { useToast } from '../components/Toast'
 
 async function getBackend() { return import('../../wailsjs/go/main/App') }
 
@@ -13,6 +14,7 @@ type DeviceSource = 'last_scan' | 'manual'
 
 export default function AuditPage() {
   const qc = useQueryClient()
+  const { toast } = useToast()
   const [deviceSource, setDeviceSource] = useState<DeviceSource>('last_scan')
   const [lastScanDevices, setLastScanDevices] = useState<any[]>([])
   const [selectedDevices, setSelectedDevices] = useState<string[]>([])
@@ -23,6 +25,7 @@ export default function AuditPage() {
   const [editRule, setEditRule] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<'run' | 'rules'>('run')
   const [showRuleFilter, setShowRuleFilter] = useState(true)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
   const { data: rules = [] } = useQuery({
     queryKey: ['audit-rules'],
@@ -69,7 +72,13 @@ export default function AuditPage() {
       if (useFiltered) return m.RunAuditFiltered(deviceIDs, selectedRules)
       return m.RunAudit(deviceIDs)
     },
-    onSuccess: (data: any) => setReports(data || []),
+    onSuccess: (data: any) => {
+      setReports(data || [])
+      const count = (data || []).length
+      if (count > 0) toast(`Audit terminé pour ${count} équipement(s)`, 'success')
+      else toast('Aucun résultat d\'audit', 'warning')
+    },
+    onError: (e: any) => toast(`Erreur audit: ${e?.message || e}`, 'error'),
   })
 
   const saveRuleMutation = useMutation({
@@ -290,7 +299,7 @@ export default function AuditPage() {
                     </td>
                     <td className="p-3 flex gap-1">
                       <Button size="sm" variant="ghost" onClick={() => { setEditRule(rule); setShowRuleModal(true) }}>Éditer</Button>
-                      <Button size="sm" variant="ghost" onClick={() => deleteRuleMutation.mutate(rule.id)}>
+                      <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(rule.id)}>
                         <Trash2 className="w-3.5 h-3.5 text-red-400" />
                       </Button>
                     </td>
@@ -301,6 +310,23 @@ export default function AuditPage() {
           </div>
         )}
       </div>
+
+      {/* Confirm delete */}
+      <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Confirmer la suppression" size="sm">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-sm text-slate-300">Voulez-vous vraiment supprimer cette règle d'audit ?</p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setConfirmDelete(null)}>Annuler</Button>
+            <Button variant="danger" loading={deleteRuleMutation.isPending}
+              onClick={() => { if (confirmDelete) { deleteRuleMutation.mutate(confirmDelete); setConfirmDelete(null) } }}>
+              Supprimer
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal open={showRuleModal} onClose={() => setShowRuleModal(false)} title="Règle d'audit">
         <form onSubmit={e => { e.preventDefault(); saveRuleMutation.mutate(editRule) }} className="space-y-3">

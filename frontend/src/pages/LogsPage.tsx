@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Fragment, useCallback, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { RefreshCw, FileText, Search, X, ChevronDown, ChevronUp } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
@@ -26,8 +26,18 @@ function actionColor(action: string) {
   return 'text-slate-400'
 }
 
+function useDebouncedValue(value: string, delay: number) {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay)
+    return () => clearTimeout(timer)
+  }, [value, delay])
+  return debounced
+}
+
 export default function LogsPage() {
-  const [actionFilter, setActionFilter] = useState('')
+  const [filterInput, setFilterInput] = useState('')
+  const actionFilter = useDebouncedValue(filterInput, 300)
   const [selectedLog, setSelectedLog] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<'events' | 'files'>('events')
   const [selectedFile, setSelectedFile] = useState('')
@@ -91,11 +101,11 @@ export default function LogsPage() {
               <>
                 <div className="relative">
                   <Search className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-slate-500" />
-                  <input value={actionFilter} onChange={e => setActionFilter(e.target.value)}
+                  <input value={filterInput} onChange={e => setFilterInput(e.target.value)}
                     placeholder="Filtrer..."
                     className="pl-7 pr-6 py-1.5 bg-slate-800 border border-slate-700 rounded-md text-xs text-slate-200 w-40 focus:outline-none focus:border-blue-500" />
-                  {actionFilter && (
-                    <button onClick={() => setActionFilter('')} className="absolute right-2 top-1/2 -translate-y-1/2">
+                  {filterInput && (
+                    <button onClick={() => setFilterInput('')} className="absolute right-2 top-1/2 -translate-y-1/2">
                       <X className="w-3 h-3 text-slate-500" />
                     </button>
                   )}
@@ -132,8 +142,8 @@ export default function LogsPage() {
                   const parsed = tryParseJson(log.details)
                   const isExpanded = expandedDetails.has(log.id)
                   return (
-                    <>
-                      <tr key={log.id}
+                    <Fragment key={log.id}>
+                      <tr
                         className="border-b border-slate-800/50 hover:bg-slate-800/30 cursor-pointer"
                         onClick={() => setSelectedLog(log)}>
                         <td className="p-3 text-xs text-slate-500 whitespace-nowrap">{formatDate(log.created_at)}</td>
@@ -160,7 +170,7 @@ export default function LogsPage() {
                         </td>
                       </tr>
                       {isExpanded && (
-                        <tr key={`${log.id}-exp`} className="bg-slate-900/50">
+                        <tr className="bg-slate-900/50">
                           <td colSpan={6} className="px-6 py-3">
                             <pre className="text-xs text-slate-300 font-mono bg-slate-950 p-3 rounded-lg">
                               {parsed ? JSON.stringify(parsed, null, 2) : log.details}
@@ -168,13 +178,13 @@ export default function LogsPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   )
                 })}
                 {(logs as any[]).length === 0 && (
                   <tr>
                     <td colSpan={6} className="text-center py-12 text-slate-500">
-                      Aucun log{actionFilter ? ` pour "${actionFilter}"` : ''}
+                      Aucun log{filterInput ? ` pour "${filterInput}"` : ''}
                     </td>
                   </tr>
                 )}

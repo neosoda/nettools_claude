@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, Edit, Plug, RefreshCw, Eraser } from 'lucide-react'
+import { Plus, Trash2, Edit, Plug, RefreshCw, Eraser, AlertTriangle } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import Button from '../components/Button'
 import Modal from '../components/Modal'
@@ -8,6 +8,7 @@ import Input from '../components/Input'
 import Select from '../components/Select'
 import StatusBadge from '../components/StatusBadge'
 import { formatDate } from '../lib/utils'
+import { useToast } from '../components/Toast'
 
 // We use dynamic import to avoid issues at startup if wailsjs not generated yet
 async function getBackend() {
@@ -18,7 +19,7 @@ async function getBackend() {
 interface Device {
   id: string; ip: string; hostname: string; vendor: string; model: string
   os_version: string; location: string; ssh_port: number; credential_id: string
-  last_seen_at: string; created_at: string
+  last_seen_at?: string; created_at: string
 }
 
 interface Credential {
@@ -34,11 +35,13 @@ const vendorOptions = [
 
 export default function InventoryPage() {
   const qc = useQueryClient()
+  const { toast } = useToast()
   const [showModal, setShowModal] = useState(false)
   const [editDevice, setEditDevice] = useState<Partial<Device> | null>(null)
   const [testing, setTesting] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [confirmClear, setConfirmClear] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
   const { data: devices = [], isLoading } = useQuery({
     queryKey: ['devices'],
@@ -65,7 +68,9 @@ export default function InventoryPage() {
       qc.invalidateQueries({ queryKey: ['devices'] })
       setShowModal(false)
       setEditDevice(null)
+      toast('Équipement sauvegardé', 'success')
     },
+    onError: (e: any) => toast(`Erreur: ${e?.message || e}`, 'error'),
   })
 
   const deleteMutation = useMutation({
@@ -73,7 +78,11 @@ export default function InventoryPage() {
       const m = await getBackend()
       return m.DeleteDevice(id)
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['devices'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['devices'] })
+      setConfirmDelete(null)
+      toast('Équipement supprimé', 'success')
+    },
   })
 
   const clearMutation = useMutation({
@@ -84,15 +93,25 @@ export default function InventoryPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['devices'] })
       setConfirmClear(false)
+      toast('Inventaire vidé', 'success')
     },
   })
 
   const handleTest = async (deviceId: string) => {
     setTesting(deviceId)
-    const m = await getBackend()
-    const result = await m.TestDeviceConnection(deviceId)
-    setTesting(null)
-    alert(result.success ? '✅ Connexion SSH réussie' : '❌ Échec: ' + result.error)
+    try {
+      const m = await getBackend()
+      const result = await m.TestDeviceConnection(deviceId)
+      setTesting(null)
+      if (result.success) {
+        toast('Connexion SSH réussie', 'success')
+      } else {
+        toast(`Échec SSH: ${result.error}`, 'error')
+      }
+    } catch (e: any) {
+      setTesting(null)
+      toast(`Erreur: ${e?.message || e}`, 'error')
+    }
   }
 
   const filtered = devices.filter((d: Device) =>
@@ -170,7 +189,7 @@ export default function InventoryPage() {
                   </td>
                   <td className="py-2.5 text-slate-400">{device.model || '—'}</td>
                   <td className="py-2.5 text-slate-400">{device.location || '—'}</td>
-                  <td className="py-2.5 text-slate-500 text-xs">{formatDate(device.last_seen_at)}</td>
+                  <td className="py-2.5 text-slate-500 text-xs">{formatDate(device.last_seen_at || '')}</td>
                   <td className="py-2.5">
                     <div className="flex gap-1">
                       <Button size="sm" variant="ghost" onClick={() => { setEditDevice(device); setShowModal(true) }}>
@@ -179,7 +198,7 @@ export default function InventoryPage() {
                       <Button size="sm" variant="ghost" loading={testing === device.id} onClick={() => handleTest(device.id)}>
                         <Plug className="w-3.5 h-3.5" />
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => deleteMutation.mutate(device.id)}>
+                      <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(device.id)}>
                         <Trash2 className="w-3.5 h-3.5 text-red-400" />
                       </Button>
                     </div>
@@ -197,6 +216,23 @@ export default function InventoryPage() {
           </table>
         )}
       </div>
+
+      {/* Confirm delete */}
+      <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Confirmer la suppression" size="sm">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-sm text-slate-300">Voulez-vous vraiment supprimer cet équipement ?</p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setConfirmDelete(null)}>Annuler</Button>
+            <Button variant="danger" loading={deleteMutation.isPending}
+              onClick={() => { if (confirmDelete) deleteMutation.mutate(confirmDelete) }}>
+              Supprimer
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal open={showModal} onClose={() => { setShowModal(false); setEditDevice(null) }}
         title={editDevice?.id ? 'Modifier équipement' : 'Ajouter équipement'}>

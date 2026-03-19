@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import ReactFlow, { Node, Edge, Controls, MiniMap, Background, useNodesState, useEdgesState, BackgroundVariant } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { useQuery } from '@tanstack/react-query'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, GitGraph } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import Button from '../components/Button'
 
@@ -32,12 +32,13 @@ export default function TopologyPage() {
       id: n.id,
       position: { x: (i % 5) * 220 + 50, y: Math.floor(i / 5) * 160 + 50 },
       data: {
+        vendor: n.vendor,
         label: (
           <div className="text-center p-1">
             <div className="text-xs font-mono font-bold" style={{ color: vendorColor(n.vendor) }}>{n.label}</div>
             <div className="text-xs text-slate-400 mt-0.5">{n.ip}</div>
             {n.hint?.show_poe_icon && (
-              <div className="text-xs mt-0.5" style={{ color: n.hint.terminal_color === 'green' ? '#22c55e' : '#3b82f6' }}>⚡PoE</div>
+              <div className="text-xs mt-0.5" style={{ color: n.hint.terminal_color === 'green' ? '#22c55e' : '#3b82f6' }}>PoE</div>
             )}
           </div>
         ),
@@ -57,6 +58,14 @@ export default function TopologyPage() {
         {isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center text-slate-500">
             <RefreshCw className="w-5 h-5 animate-spin mr-2" /> Chargement...
+          </div>
+        ) : nodes.length === 0 ? (
+          <div className="absolute inset-0 flex items-center justify-center text-slate-500">
+            <div className="text-center">
+              <GitGraph className="w-12 h-12 mx-auto mb-3 opacity-20" />
+              <p className="text-sm">Aucun équipement dans l'inventaire.</p>
+              <p className="text-xs text-slate-600 mt-1">Lancez une découverte réseau pour construire la topologie.</p>
+            </div>
           </div>
         ) : (
           <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} fitView style={{ background: '#0f172a' }}>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, CalendarClock, Info } from 'lucide-react'
+import { Plus, Trash2, CalendarClock, Info, AlertTriangle } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import Button from '../components/Button'
 import Modal from '../components/Modal'
@@ -43,6 +43,7 @@ export default function SchedulerPage() {
   const [showModal, setShowModal] = useState(false)
   const [editJob, setEditJob] = useState<any>(null)
   const [advancedCron, setAdvancedCron] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
   // UI form state
   const [freq, setFreq] = useState('daily')
@@ -155,7 +156,7 @@ export default function SchedulerPage() {
                     </button>
                   </td>
                   <td className="p-4">
-                    <Button size="sm" variant="ghost" onClick={() => deleteMutation.mutate(job.id)}>
+                    <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(job.id)}>
                       <Trash2 className="w-3.5 h-3.5 text-red-400" />
                     </Button>
                   </td>
@@ -173,6 +174,23 @@ export default function SchedulerPage() {
           </table>
         </div>
       </div>
+
+      {/* Confirm delete */}
+      <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Confirmer la suppression" size="sm">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-sm text-slate-300">Voulez-vous vraiment supprimer cette tâche planifiée ?</p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setConfirmDelete(null)}>Annuler</Button>
+            <Button variant="danger" loading={deleteMutation.isPending}
+              onClick={() => { if (confirmDelete) { deleteMutation.mutate(confirmDelete); setConfirmDelete(null) } }}>
+              Supprimer
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* New/Edit modal */}
       <Modal open={showModal} onClose={() => setShowModal(false)} title="Nouvelle tâche planifiée" size="lg">

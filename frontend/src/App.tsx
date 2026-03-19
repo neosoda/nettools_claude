@@ -3,11 +3,13 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Network, DatabaseBackup, GitCompare, ShieldCheck,
-  Terminal, CalendarClock, GitGraph, ScrollText, Settings, Activity, Square, KeyRound
+  Terminal, CalendarClock, GitGraph, ScrollText, Settings, Activity, Square, KeyRound,
+  PanelLeftClose, PanelLeftOpen
 } from 'lucide-react'
 import { cn } from './lib/utils'
 import { EventsOn } from '../wailsjs/runtime/runtime'
 import { CredentialProvider, useGlobalCredential } from './context/CredentialContext'
+import { ToastProvider } from './components/Toast'
 
 import ScanPage from './pages/ScanPage'
 import BackupPage from './pages/BackupPage'
@@ -33,7 +35,7 @@ const navItems = [
 
 async function getBackend() { return import('../wailsjs/go/main/App') }
 
-function SidebarCredentialSelector() {
+function SidebarCredentialSelector({ collapsed }: { collapsed: boolean }) {
   const { globalCredId, setGlobalCredId } = useGlobalCredential()
   const { data: credentials = [] } = useQuery({
     queryKey: ['credentials'],
@@ -41,6 +43,14 @@ function SidebarCredentialSelector() {
   })
 
   if ((credentials as any[]).length === 0) return null
+  if (collapsed) {
+    const active = (credentials as any[]).find((c: any) => c.id === globalCredId)
+    return (
+      <div className="px-2 py-2 border-b border-slate-800" title={active ? `Credential: ${active.name}` : 'Aucun credential'}>
+        <KeyRound className={cn('w-4 h-4 mx-auto', globalCredId ? 'text-green-400' : 'text-slate-600')} />
+      </div>
+    )
+  }
 
   return (
     <div className="px-3 py-2 border-b border-slate-800">
@@ -64,17 +74,33 @@ function SidebarCredentialSelector() {
 
 function AppContent() {
   const [hasRunningTask, setHasRunningTask] = useState(false)
+  const [taskInfo, setTaskInfo] = useState('')
   const [stopStatus, setStopStatus] = useState('')
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebar_collapsed') === 'true')
 
   useEffect(() => {
-    const unsub1 = EventsOn('scan:progress', () => setHasRunningTask(true))
-    const unsub2 = EventsOn('scan:complete', () => setHasRunningTask(false))
-    const unsub3 = EventsOn('tasks:stopped', () => {
+    localStorage.setItem('sidebar_collapsed', String(collapsed))
+  }, [collapsed])
+
+  useEffect(() => {
+    const unsub1 = EventsOn('scan:progress', (data: any) => {
+      setHasRunningTask(true)
+      setTaskInfo(`Scan ${data?.ip || ''}`)
+    })
+    const unsub2 = EventsOn('scan:complete', () => { setHasRunningTask(false); setTaskInfo('') })
+    const unsub3 = EventsOn('backup:progress', (data: any) => {
+      if (data?.status === 'running') {
+        setHasRunningTask(true)
+        setTaskInfo(`Backup ${data?.device_ip || ''}`)
+      }
+    })
+    const unsub4 = EventsOn('tasks:stopped', () => {
       setHasRunningTask(false)
+      setTaskInfo('')
       setStopStatus('Arrêté')
       setTimeout(() => setStopStatus(''), 2000)
     })
-    return () => { unsub1(); unsub2(); unsub3() }
+    return () => { unsub1(); unsub2(); unsub3(); unsub4() }
   }, [])
 
   const handleStop = async () => {
@@ -85,15 +111,21 @@ function AppContent() {
   return (
     <div className="flex h-screen bg-slate-950">
       {/* Sidebar */}
-      <nav className="flex flex-col w-[220px] bg-slate-900 border-r border-slate-800 shrink-0">
-        {/* Logo */}
-        <div className="flex items-center gap-2 px-4 h-14 border-b border-slate-800">
-          <Activity className={cn("w-5 h-5", hasRunningTask ? "text-blue-400 animate-pulse" : "text-blue-400")} />
-          <span className="font-semibold text-white text-sm">NetworkTools</span>
+      <nav className={cn(
+        "flex flex-col bg-slate-900 border-r border-slate-800 shrink-0 transition-all duration-200",
+        collapsed ? "w-[56px]" : "w-[220px]"
+      )}>
+        {/* Logo + collapse toggle */}
+        <div className="flex items-center gap-2 px-3 h-14 border-b border-slate-800">
+          <Activity className={cn("w-5 h-5 shrink-0", hasRunningTask ? "text-blue-400 animate-pulse" : "text-blue-400")} />
+          {!collapsed && <span className="font-semibold text-white text-sm flex-1">NetworkTools</span>}
+          <button onClick={() => setCollapsed(c => !c)} className="text-slate-500 hover:text-slate-300 transition-colors" title={collapsed ? 'Développer' : 'Réduire'}>
+            {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+          </button>
         </div>
 
         {/* Global credential selector */}
-        <SidebarCredentialSelector />
+        <SidebarCredentialSelector collapsed={collapsed} />
 
         {/* Nav */}
         <div className="flex-1 overflow-y-auto py-2">
@@ -102,9 +134,11 @@ function AppContent() {
               key={to}
               to={to}
               end
+              title={collapsed ? label : undefined}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
+                  'flex items-center gap-3 py-2.5 text-sm transition-colors',
+                  collapsed ? 'justify-center px-2' : 'px-4',
                   isActive
                     ? 'bg-blue-600/20 text-blue-400 border-r-2 border-blue-400'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
@@ -112,26 +146,35 @@ function AppContent() {
               }
             >
               <Icon className="w-4 h-4 shrink-0" />
-              {label}
+              {!collapsed && label}
             </NavLink>
           ))}
         </div>
 
-        {/* Footer with Stop button */}
-        <div className="px-3 py-3 border-t border-slate-800 space-y-2">
+        {/* Footer with Stop button and task info */}
+        <div className={cn("py-3 border-t border-slate-800 space-y-2", collapsed ? "px-1" : "px-3")}>
           {hasRunningTask && (
-            <button
-              onClick={handleStop}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-600/20 border border-red-600/50 text-red-400 text-xs font-medium hover:bg-red-600/30 transition-colors"
-            >
-              <Square className="w-3.5 h-3.5" />
-              Arrêter les tâches
-            </button>
+            <>
+              {!collapsed && taskInfo && (
+                <p className="text-xs text-blue-400 text-center truncate animate-pulse">{taskInfo}</p>
+              )}
+              <button
+                onClick={handleStop}
+                title="Arrêter les tâches"
+                className={cn(
+                  "w-full flex items-center justify-center gap-2 rounded-lg bg-red-600/20 border border-red-600/50 text-red-400 text-xs font-medium hover:bg-red-600/30 transition-colors",
+                  collapsed ? "px-1 py-2" : "px-3 py-2"
+                )}
+              >
+                <Square className="w-3.5 h-3.5 shrink-0" />
+                {!collapsed && 'Arrêter'}
+              </button>
+            </>
           )}
           {stopStatus && (
             <p className="text-xs text-center text-green-400">{stopStatus}</p>
           )}
-          <p className="text-xs text-slate-600 text-center">v1.2.0</p>
+          {!collapsed && <p className="text-xs text-slate-600 text-center">v1.2.0</p>}
         </div>
       </nav>
 
@@ -157,7 +200,9 @@ function AppContent() {
 export default function App() {
   return (
     <CredentialProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </CredentialProvider>
   )
 }

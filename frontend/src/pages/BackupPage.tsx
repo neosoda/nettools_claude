@@ -10,6 +10,7 @@ import Modal from '../components/Modal'
 import { formatDate, formatBytes } from '../lib/utils'
 import { EventsOn } from '../../wailsjs/runtime/runtime'
 import { useGlobalCredential } from '../context/CredentialContext'
+import { useToast } from '../components/Toast'
 
 async function getBackend() { return import('../../wailsjs/go/main/App') }
 
@@ -17,6 +18,7 @@ type DeviceSource = 'last_scan' | 'manual'
 
 export default function BackupPage() {
   const { globalCredId } = useGlobalCredential()
+  const { toast } = useToast()
 
   // Source des équipements
   const [deviceSource, setDeviceSource] = useState<DeviceSource>('manual')
@@ -110,7 +112,15 @@ export default function BackupPage() {
         password: '',
       })
     },
-    onSuccess: () => refetchBackups(),
+    onSuccess: (data: any) => {
+      refetchBackups()
+      const succeeded = (data || []).filter((b: any) => b.status === 'success').length
+      const failed = (data || []).filter((b: any) => b.status === 'failed').length
+      if (failed === 0 && succeeded > 0) toast(`${succeeded} backup(s) réussi(s)`, 'success')
+      else if (failed > 0 && succeeded > 0) toast(`${succeeded} réussi(s), ${failed} échoué(s)`, 'warning')
+      else if (failed > 0) toast(`${failed} backup(s) échoué(s)`, 'error')
+    },
+    onError: (e: any) => toast(`Erreur: ${e?.message || e}`, 'error'),
   })
 
   const handleViewBackup = async (id: string) => {

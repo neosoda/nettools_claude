@@ -210,7 +210,7 @@ func (s *Session) RunCommandInteractive(ctx context.Context, command string) (st
 		deadline := time.After(s.timeout)
 		tick := time.NewTicker(150 * time.Millisecond)
 		defer tick.Stop()
-		lastLen := -1
+		lastLen := 0
 		stableCount := 0
 		for {
 			select {
@@ -220,14 +220,18 @@ func (s *Session) RunCommandInteractive(ctx context.Context, command string) (st
 				return
 			case <-tick.C:
 				current := sb.String()
-				// Handle pagination
-				if vc.PaginationPattern.MatchString(current) {
-					fmt.Fprint(stdin, vc.PaginationSend)
-					stableCount = 0
-					lastLen = len(current)
-					continue
+				currentLen := len(current)
+				// Only check new content for pagination to avoid re-matching old --More--
+				if currentLen > lastLen {
+					newContent := current[lastLen:]
+					if vc.PaginationPattern.MatchString(newContent) {
+						fmt.Fprint(stdin, vc.PaginationSend)
+						stableCount = 0
+						lastLen = currentLen
+						continue
+					}
 				}
-				if len(current) == lastLen {
+				if currentLen == lastLen {
 					stableCount++
 					// Require 20 stable ticks (3s) AND a prompt at end
 					if stableCount >= 20 && vc.PromptPattern.MatchString(strings.TrimSpace(current)) {
@@ -239,7 +243,7 @@ func (s *Session) RunCommandInteractive(ctx context.Context, command string) (st
 					}
 				} else {
 					stableCount = 0
-					lastLen = len(current)
+					lastLen = currentLen
 				}
 			}
 		}
