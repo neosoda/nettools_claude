@@ -141,7 +141,7 @@ export default function DiffPage() {
       />
       <div className="flex-1 overflow-hidden flex flex-col">
         {/* Options bar */}
-        <div className="flex items-center gap-4 px-4 py-2 bg-slate-900 border-b border-slate-800 text-xs">
+        <div className="flex flex-wrap items-center gap-3 md:gap-4 px-4 py-2 bg-slate-900 border-b border-slate-800 text-xs">
           <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer hover:text-slate-200 transition-colors">
             <input type="checkbox" className="w-3 h-3 accent-blue-500" checked={ignoreCase}
               onChange={e => setIgnoreCase(e.target.checked)} />
@@ -179,8 +179,8 @@ export default function DiffPage() {
         </div>
 
         {/* Input areas with drag & drop */}
-        <div className="grid grid-cols-2 gap-0 border-b border-slate-800 h-48">
-          <div className="flex flex-col border-r border-slate-800"
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-0 border-b border-slate-800 min-h-[12rem] md:h-48">
+          <div className="flex flex-col border-b md:border-b-0 md:border-r border-slate-800"
             onDrop={handleDrop('a')} onDragOver={handleDragOver}>
             <div className="px-4 py-2 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
               <span className="text-xs text-slate-400">
@@ -235,16 +235,16 @@ export default function DiffPage() {
         {/* Diff output */}
         <div className="flex-1 overflow-auto">
           {displayDiffs.length > 0 ? (
-            <pre className="text-xs font-mono">
+            <pre className="text-xs font-mono overflow-x-auto">
               {displayDiffs.map((line, i) => (
-                <div key={i} className={`px-4 py-0.5 flex gap-4 ${
+                <div key={i} className={`px-2 md:px-4 py-0.5 flex gap-2 md:gap-4 ${
                   line.type === 'insert' ? 'bg-green-900/15 border-l-2 border-green-500' :
                   line.type === 'delete' ? 'bg-red-900/15 border-l-2 border-red-500' :
                   'border-l-2 border-transparent'}`}>
-                  <span className="w-10 text-slate-600 select-none text-right shrink-0">
+                  <span className="hidden sm:inline w-10 text-slate-600 select-none text-right shrink-0">
                     {line.type !== 'insert' ? line.line_a : ''}
                   </span>
-                  <span className="w-10 text-slate-600 select-none text-right shrink-0">
+                  <span className="hidden sm:inline w-10 text-slate-600 select-none text-right shrink-0">
                     {line.type !== 'delete' ? line.line_b : ''}
                   </span>
                   <span className={`mr-2 font-bold ${
@@ -252,9 +252,9 @@ export default function DiffPage() {
                     line.type === 'delete' ? 'text-red-400' : 'text-slate-700'}`}>
                     {line.type === 'insert' ? '+' : line.type === 'delete' ? '-' : ' '}
                   </span>
-                  <span className={
+                  <span className={`break-all whitespace-pre-wrap ${
                     line.type === 'insert' ? 'text-green-300' :
-                    line.type === 'delete' ? 'text-red-300' : 'text-slate-500'}>{line.content}</span>
+                    line.type === 'delete' ? 'text-red-300' : 'text-slate-500'}`}>{line.content}</span>
                 </div>
               ))}
             </pre>
