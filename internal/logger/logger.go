@@ -55,6 +55,36 @@ func Error(msg string, err error) {
 	appLogger.Error().Err(err).Msg(msg)
 }
 
+func CleanupOldLogs(logDir string, retentionDays int) error {
+	if retentionDays <= 0 {
+		return nil
+	}
+	entries, err := os.ReadDir(logDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	cutoff := time.Now().AddDate(0, 0, -retentionDays)
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".log" {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		if info.ModTime().Before(cutoff) {
+			_ = os.Remove(filepath.Join(logDir, entry.Name()))
+		}
+	}
+	if db.DB != nil {
+		db.DB.Where("created_at < ?", cutoff).Delete(&models.AuditLog{})
+	}
+	return nil
+}
+
 // AuditAction logs an action to the audit_logs table
 func AuditAction(ctx context.Context, action, entityType, entityID, details, status string, durationMs int64) {
 	entry := models.AuditLog{

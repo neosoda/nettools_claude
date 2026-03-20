@@ -1,6 +1,9 @@
 package topology
 
 import (
+	"fmt"
+	"net"
+	"sort"
 	"strings"
 
 	"networktools/internal/db"
@@ -99,5 +102,80 @@ func Build() (*Graph, error) {
 		graph.Nodes = append(graph.Nodes, node)
 	}
 
+	graph.Edges = buildHeuristicEdges(devices)
 	return graph, nil
+}
+
+func buildHeuristicEdges(devices []models.Device) []Edge {
+	subnets := map[string][]models.Device{}
+	for _, device := range devices {
+		subnet := subnetKey(device.IP)
+		if subnet == "" {
+			continue
+		}
+		subnets[subnet] = append(subnets[subnet], device)
+	}
+
+	edges := make([]Edge, 0)
+	seen := map[string]struct{}{}
+	for subnet, group := range subnets {
+		if len(group) < 2 {
+			continue
+		}
+		sort.Slice(group, func(i, j int) bool { return group[i].IP < group[j].IP })
+		root := selectSubnetRoot(group)
+		for _, device := range group {
+			if device.ID == root.ID {
+				continue
+			}
+			key := root.ID + ":" + device.ID
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			edges = append(edges, Edge{ID: fmt.Sprintf("%s-%s", root.ID, device.ID), Source: root.ID, Target: device.ID, Label: subnet})
+		}
+	}
+	return edges
+}
+
+func selectSubnetRoot(group []models.Device) models.Device {
+	best := group[0]
+	bestScore := heuristicRootScore(best)
+	for _, device := range group[1:] {
+		score := heuristicRootScore(device)
+		if score > bestScore || (score == bestScore && device.IP < best.IP) {
+			best = device
+			bestScore = score
+		}
+	}
+	return best
+}
+
+func heuristicRootScore(device models.Device) int {
+	score := 0
+	if strings.Contains(strings.ToLower(device.Model), "core") || strings.Contains(strings.ToLower(device.Hostname), "core") {
+		score += 10
+	}
+	parsed := net.ParseIP(device.IP)
+	if parsed != nil {
+		if ipv4 := parsed.To4(); ipv4 != nil {
+			last := int(ipv4[3])
+			if last == 254 || last == 1 {
+				score += 5
+			}
+		}
+	}
+	return score
+}
+
+func subnetKey(ip string) string {
+	parsed := net.ParseIP(strings.TrimSpace(ip))
+	if parsed == nil {
+		return ""
+	}
+	if ipv4 := parsed.To4(); ipv4 != nil {
+		return fmt.Sprintf("%d.%d.%d.0/24", ipv4[0], ipv4[1], ipv4[2])
+	}
+	return parsed.Mask(net.CIDRMask(64, 128)).String() + "/64"
 }

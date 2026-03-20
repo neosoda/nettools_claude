@@ -11,7 +11,7 @@ import { formatDate, formatBytes } from '../lib/utils'
 import { EventsOn } from '../../wailsjs/runtime/runtime'
 import { useGlobalCredential } from '../context/CredentialContext'
 
-async function getBackend() { return import('../../wailsjs/go/main/App') }
+import backend from '../lib/backend'
 
 type DeviceSource = 'last_scan' | 'manual'
 
@@ -44,19 +44,19 @@ export default function BackupPage() {
   // For history device selector: devices auto-populated by scans/backups
   const { data: knownDevices = [] } = useQuery({
     queryKey: ['devices'],
-    queryFn: async () => { const m = await getBackend(); return m.GetDevices() },
+    queryFn: () => backend.GetDevices(),
   })
 
   const { data: backups = [], refetch: refetchBackups } = useQuery({
     queryKey: ['backups', selectedDevice],
     enabled: !!selectedDevice,
-    queryFn: async () => { const m = await getBackend(); return m.GetBackups(selectedDevice) },
+    queryFn: () => backend.GetBackups(selectedDevice),
   })
 
   // Load last scan devices when source changes
   useEffect(() => {
     if (deviceSource === 'last_scan') {
-      getBackend().then(m => m.GetLastScanDevices()).then(devs => {
+      Promise.resolve(backend.GetLastScanDevices()).then(devs => {
         setLastScanDevices(devs || [])
         setSelectedDevices((devs || []).map((d: any) => d.id))
       })
@@ -98,7 +98,7 @@ export default function BackupPage() {
 
   const backupMutation = useMutation({
     mutationFn: async () => {
-      const m = await getBackend()
+      const m = backend
       setBackupProgress({})
       if (deviceSource === 'manual') {
         const ipList = manualIpText.split(/[\n,;]+/).map((s: string) => s.trim()).filter(Boolean)
@@ -124,7 +124,7 @@ export default function BackupPage() {
   })
 
   const handleViewBackup = async (id: string) => {
-    const m = await getBackend()
+    const m = backend
     const content = await m.GetBackupContent(id)
     setBackupContent(content)
     setViewBackup(id)
@@ -142,7 +142,7 @@ export default function BackupPage() {
     setTerminalRunning(true)
     setTerminalLines([])
     try {
-      const m = await getBackend()
+      const m = backend
       await m.RunTerminalCommand(terminalDevice, terminalCommand.trim())
     } catch (e: any) {
       setTerminalLines(prev => [...prev, { text: `ERREUR: ${e?.message || e}`, error: true }])

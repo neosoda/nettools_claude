@@ -6,7 +6,7 @@ import { RefreshCw } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import Button from '../components/Button'
 
-async function getBackend() { return import('../../wailsjs/go/main/App') }
+import backend from '../lib/backend'
 
 function vendorColor(vendor: string) {
   switch (vendor) {
@@ -23,7 +23,7 @@ export default function TopologyPage() {
 
   const { data: graph, isLoading, refetch } = useQuery({
     queryKey: ['topology'],
-    queryFn: async () => { const m = await getBackend(); return m.GetTopology() },
+    queryFn: () => backend.GetTopology(),
   })
 
   useEffect(() => {

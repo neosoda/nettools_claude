@@ -91,7 +91,10 @@ func (s *Scheduler) executeJob(ctx context.Context, job *models.ScheduledJob) {
 
 	var payload map[string]interface{}
 	if job.Payload != "" {
-		json.Unmarshal([]byte(job.Payload), &payload)
+		if err := json.Unmarshal([]byte(job.Payload), &payload); err != nil {
+			logger.Error(fmt.Sprintf("invalid scheduled job payload for %s", job.Name), err)
+			payload = map[string]interface{}{}
+		}
 	}
 
 	status := "success"
@@ -111,17 +114,22 @@ func (s *Scheduler) executeJob(ctx context.Context, job *models.ScheduledJob) {
 	if once, ok := payload["once"]; ok {
 		if onceBool, ok := once.(bool); ok && onceBool {
 			updates["enabled"] = false
-			// Remove from cron scheduler
-			s.mu.Lock()
-			if id, ok := s.entryIDs[job.ID]; ok {
-				s.cron.Remove(id)
-				delete(s.entryIDs, job.ID)
+			if scheduledAt := parseOnceTimestamp(payload); !scheduledAt.IsZero() && now.Before(scheduledAt) {
+				delete(updates, "enabled")
+			} else {
+				s.mu.Lock()
+				if id, ok := s.entryIDs[job.ID]; ok {
+					s.cron.Remove(id)
+					delete(s.entryIDs, job.ID)
+				}
+				s.mu.Unlock()
 			}
-			s.mu.Unlock()
 		}
 	}
 
-	db.DB.Model(job).Updates(updates)
+	if err := db.DB.Model(job).Updates(updates).Error; err != nil {
+		logger.Error(fmt.Sprintf("failed to persist scheduled job status for %s", job.Name), err)
+	}
 
 	logger.AuditAction(ctx, "job_executed", "scheduled_job", job.ID,
 		fmt.Sprintf(`{"type":"%s","status":"%s"}`, job.JobType, status),
@@ -156,7 +164,9 @@ func (s *Scheduler) ToggleJob(ctx context.Context, jobID string, enabled bool) e
 		return err
 	}
 	job.Enabled = enabled
-	db.DB.Save(&job)
+	if err := db.DB.Save(&job).Error; err != nil {
+		return err
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -171,4 +181,16 @@ func (s *Scheduler) ToggleJob(ctx context.Context, jobID string, enabled bool) e
 		s.scheduleUnlocked(ctx, &job)
 	}
 	return nil
+}
+
+func parseOnceTimestamp(payload map[string]interface{}) time.Time {
+	raw, _ := payload["once_at"].(string)
+	if raw == "" {
+		return time.Time{}
+	}
+	ts, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return time.Time{}
+	}
+	return ts
 }

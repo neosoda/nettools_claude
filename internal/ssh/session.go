@@ -295,7 +295,7 @@ waitLoop:
 				bannerDismissed = true
 				continue
 			}
-			if vc.PromptPattern.MatchString(strings.TrimSpace(current)) {
+			if hasTerminalPrompt(vc.PromptPattern, current) {
 				waitReady.Stop()
 				break waitLoop
 			}
@@ -322,7 +322,7 @@ waitLoop:
 			case <-pagingWait.C:
 				if sb.Len() == prevLen {
 					stableCount++
-					if stableCount >= 5 && vc.PromptPattern.MatchString(strings.TrimSpace(sb.String())) {
+					if stableCount >= 5 && hasTerminalPrompt(vc.PromptPattern, sb.String()) {
 						pagingWait.Stop()
 						break pagingLoop
 					}
@@ -363,7 +363,7 @@ waitLoop:
 				tail := sb.String()[tailStart:]
 
 				// Handle pagination prompts — check tail only
-				if vc.PaginationPattern.MatchString(tail) {
+				if vc.PaginationPattern != nil && vc.PaginationPattern.MatchString(tail) {
 					fmt.Fprint(stdin, vc.PaginationSend)
 					stableCount = 0
 					lastLen = currentLen
@@ -372,7 +372,7 @@ waitLoop:
 
 				// Handle late banners (some devices show banners mid-stream)
 				if vc.BannerPattern != nil && vc.BannerPattern.MatchString(tail) &&
-					!vc.PromptPattern.MatchString(strings.TrimSpace(tail)) {
+					!hasTerminalPrompt(vc.PromptPattern, tail) {
 					fmt.Fprint(stdin, vc.BannerSend)
 					stableCount = 0
 					lastLen = currentLen
@@ -381,11 +381,12 @@ waitLoop:
 
 				if currentLen == lastLen {
 					stableCount++
-					// Require 15 stable ticks (~1.5s) AND a prompt at end
-					if stableCount >= 15 && vc.PromptPattern.MatchString(strings.TrimSpace(tail)) {
+					if stableCount >= 10 && hasTerminalPrompt(vc.PromptPattern, tail) {
 						return
 					}
-					// Safety: return after 50 stable ticks (~5s) even without prompt
+					if stableCount >= 30 && configOutputLooksComplete(command, tail) {
+						return
+					}
 					if stableCount >= 50 {
 						return
 					}
@@ -444,4 +445,35 @@ func CleanOutput(raw string) string {
 	}
 
 	return strings.TrimSpace(strings.Join(finalLines, "\n"))
+}
+
+func hasTerminalPrompt(re *regexp.Regexp, text string) bool {
+	if re == nil {
+		return false
+	}
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return false
+	}
+	lines := strings.Split(trimmed, "\n")
+	last := strings.TrimSpace(lines[len(lines)-1])
+	return re.MatchString(last)
+}
+
+func configOutputLooksComplete(command, tail string) bool {
+	last := strings.TrimSpace(tail)
+	if last == "" {
+		return false
+	}
+	lower := strings.ToLower(last)
+	if strings.Contains(lower, strings.ToLower(command)) {
+		return false
+	}
+	markers := []string{"\nend", "\nreturn", "\nexit", "\n#", "\n>"}
+	for _, marker := range markers {
+		if strings.Contains(lower, marker) {
+			return true
+		}
+	}
+	return false
 }

@@ -9,7 +9,7 @@ import Select from '../components/Select'
 import StatusBadge from '../components/StatusBadge'
 import { formatDate } from '../lib/utils'
 
-async function getBackend() { return import('../../wailsjs/go/main/App') }
+import backend from '../lib/backend'
 
 // Convert UI form to cron expression (second-precision: "SEC MIN HOUR DOM MON DOW")
 function buildCronExpression(freq: string, hour: string, minute: string, dayOfWeek: string, dayOfMonth: string, onceDate: string, onceTime: string): string {
@@ -87,37 +87,37 @@ export default function SchedulerPage() {
 
   const { data: jobs = [] } = useQuery({
     queryKey: ['scheduled-jobs'],
-    queryFn: async () => { const m = await getBackend(); return m.GetScheduledJobs() },
+    queryFn: () => backend.GetScheduledJobs(),
   })
   const { data: devices = [] } = useQuery({
     queryKey: ['devices'],
-    queryFn: async () => { const m = await getBackend(); return m.GetDevices() },
+    queryFn: () => backend.GetDevices(),
   })
   const { data: playbooks = [] } = useQuery({
     queryKey: ['playbooks'],
-    queryFn: async () => { const m = await getBackend(); return m.GetPlaybooks() },
+    queryFn: () => backend.GetPlaybooks(),
   })
   const { data: credentials = [] } = useQuery({
     queryKey: ['credentials'],
-    queryFn: async () => { const m = await getBackend(); return m.GetCredentials() },
+    queryFn: () => backend.GetCredentials(),
   })
 
   const saveMutation = useMutation({
-    mutationFn: async (job: any) => { const m = await getBackend(); return m.SaveScheduledJob(job) },
+    mutationFn: (job: any) => backend.SaveScheduledJob(job),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['scheduled-jobs'] }); setShowModal(false) },
   })
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => { const m = await getBackend(); return m.DeleteScheduledJob(id) },
+    mutationFn: (id: string) => backend.DeleteScheduledJob(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['scheduled-jobs'] }),
   })
   const toggleMutation = useMutation({
     mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
-      const m = await getBackend(); return m.ToggleScheduledJob(id, enabled)
+      const m = backend; return m.ToggleScheduledJob(id, enabled)
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['scheduled-jobs'] }),
   })
   const runNowMutation = useMutation({
-    mutationFn: async (id: string) => { const m = await getBackend(); return m.RunScheduledJobNow(id) },
+    mutationFn: (id: string) => backend.RunScheduledJobNow(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['scheduled-jobs'] }),
   })
 
@@ -136,7 +136,7 @@ export default function SchedulerPage() {
     const jobType = editJob?.job_type || 'backup'
     const payload: any = {}
 
-    if (freq === 'once') payload.once = true
+    if (freq === 'once') { payload.once = true; if (onceDate && onceTime) payload.once_at = new Date(`${onceDate}T${onceTime}:00`).toISOString() }
 
     switch (jobType) {
       case 'backup':

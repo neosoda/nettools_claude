@@ -19,17 +19,17 @@ type DiffResult struct {
 }
 
 type DiffLine struct {
-	Type    string `json:"type"`    // "equal"|"insert"|"delete"
+	Type    string `json:"type"` // "equal"|"insert"|"delete"
 	Content string `json:"content"`
 	LineA   int    `json:"line_a"`
 	LineB   int    `json:"line_b"`
 }
 
 type CompareOptions struct {
-	IgnorePatterns    []string // regex patterns for lines to exclude entirely
-	IgnoreCase        bool     // case-insensitive comparison
-	IgnoreWhitespace  bool     // normalize whitespace differences
-	TrimTrailing      bool     // trim trailing whitespace on each line
+	IgnorePatterns   []string // regex patterns for lines to exclude entirely
+	IgnoreCase       bool     // case-insensitive comparison
+	IgnoreWhitespace bool     // normalize whitespace differences
+	TrimTrailing     bool     // trim trailing whitespace on each line
 }
 
 // Compare performs a line-based diff between two texts
@@ -147,7 +147,7 @@ body{background:#0f172a;color:#94a3b8;font-family:monospace;font-size:12px}
 .hdr .meta{font-size:11px;color:#64748b;margin-bottom:8px}
 .stats{display:flex;gap:20px;font-size:12px}
 .add{color:#4ade80}.rem{color:#f87171}.eq{color:#475569}
-table{width:100%;border-collapse:collapse}
+table{width:100%%;border-collapse:collapse}
 td{padding:1px 6px;white-space:pre}
 td.n{color:#475569;text-align:right;width:44px;user-select:none;border-right:1px solid #1e293b}
 td.s{color:#475569;width:16px;text-align:center;font-weight:700}

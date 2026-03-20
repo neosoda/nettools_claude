@@ -3,7 +3,7 @@ import { GitCompare, Upload, X, FileDown } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import Button from '../components/Button'
 
-async function getBackend() { return import('../../wailsjs/go/main/App') }
+import backend from '../lib/backend'
 
 interface DiffLine {
   type: 'equal' | 'insert' | 'delete'
@@ -71,7 +71,7 @@ export default function DiffPage() {
   const handleExportHTML = async () => {
     setExporting(true)
     try {
-      const m = await getBackend()
+      const m = backend
       const patterns = ignorePatterns.split('\n').map(s => s.trim()).filter(Boolean)
       await m.ExportDiffHTML(
         { text_a: textA, text_b: textB, ignore_patterns: patterns,
@@ -85,7 +85,7 @@ export default function DiffPage() {
   const handleCompare = async () => {
     setLoading(true)
     try {
-      const m = await getBackend()
+      const m = backend
       const patterns = ignorePatterns
         .split('\n')
         .map(s => s.trim())
