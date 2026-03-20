@@ -42,6 +42,14 @@ func (m *Manager) GetBackupDir() string {
 	return m.backupDir
 }
 
+// SetBackupDir updates the backup directory and ensures it exists
+func (m *Manager) SetBackupDir(dir string) {
+	if dir != "" && dir != m.backupDir {
+		os.MkdirAll(dir, 0700)
+		m.backupDir = dir
+	}
+}
+
 type BackupRequest struct {
 	Device     models.Device
 	ConfigType string // running|startup
@@ -115,6 +123,9 @@ func (m *Manager) Run(ctx context.Context, req BackupRequest) (*models.Backup, e
 
 	// Deep-clean the output: remove any remaining ANSI/control artifacts
 	output = deepCleanConfig(output)
+
+	// Extract only the configuration content (strip command echo, prompts, preamble)
+	output = extractConfigContent(output, command)
 
 	// Validate output is not empty or too short
 	if len(strings.TrimSpace(output)) < 10 {
@@ -234,6 +245,40 @@ func (m *Manager) buildFilename(device models.Device, configType string) string 
 	}
 
 	return filename
+}
+
+// extractConfigContent strips SSH session artifacts (command echo, prompts, preamble)
+// and returns only the actual configuration output
+func extractConfigContent(output, command string) string {
+	lines := strings.Split(output, "\n")
+
+	// Find the line containing the echoed command (e.g., "show running-config")
+	cmdIdx := -1
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.Contains(trimmed, command) {
+			cmdIdx = i
+			break
+		}
+	}
+
+	// Take everything after the command echo line
+	if cmdIdx >= 0 && cmdIdx+1 < len(lines) {
+		lines = lines[cmdIdx+1:]
+	}
+
+	// Remove trailing prompt lines (lines ending with # or > typically indicating a device prompt)
+	promptRe := regexp.MustCompile(`^\S.*[#>]\s*$`)
+	for len(lines) > 0 {
+		last := strings.TrimSpace(lines[len(lines)-1])
+		if last == "" || promptRe.MatchString(last) {
+			lines = lines[:len(lines)-1]
+		} else {
+			break
+		}
+	}
+
+	return strings.TrimSpace(strings.Join(lines, "\n"))
 }
 
 // deepCleanConfig performs thorough cleaning of configuration output

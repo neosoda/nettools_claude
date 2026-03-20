@@ -81,11 +81,18 @@ func (a *App) startup(ctx context.Context) {
 	// Initialize services
 	a.secretMgr = secret.New()
 
-	// Backup dir: Windows Downloads folder by default
+	// Backup dir: user Downloads folder by default, overridden by settings
 	backupDir := filepath.Join(a.dataDir, "backups") // fallback
 	if homeDir, err := os.UserHomeDir(); err == nil {
-		dl := filepath.Join(homeDir, "Downloads", "NetworkTools_Backups")
-		backupDir = dl
+		backupDir = filepath.Join(homeDir, "Downloads", "NetworkTools_Backups")
+	}
+	// Load saved settings and apply custom backup dir if configured
+	settingsPath := filepath.Join(a.dataDir, "settings.json")
+	if data, err := os.ReadFile(settingsPath); err == nil {
+		var saved AppSettings
+		if json.Unmarshal(data, &saved) == nil && saved.BackupDir != "" {
+			backupDir = saved.BackupDir
+		}
 	}
 	a.backupMgr = backup.New(backupDir)
 	a.auditEngine = audit.New()
@@ -1432,6 +1439,19 @@ func (a *App) ToggleScheduledJob(id string, enabled bool) error {
 	return a.sched.ToggleJob(a.ctx, id, enabled)
 }
 
+// RunScheduledJobNow immediately executes a scheduled job (for manual/one-time triggers)
+func (a *App) RunScheduledJobNow(id string) error {
+	var job models.ScheduledJob
+	if err := db.DB.First(&job, "id = ?", id).Error; err != nil {
+		return fmt.Errorf("job not found: %w", err)
+	}
+	var payload map[string]interface{}
+	if job.Payload != "" {
+		json.Unmarshal([]byte(job.Payload), &payload)
+	}
+	return a.runScheduledJob(a.ctx, job.JobType, payload)
+}
+
 // ─────────────────────────────────────────────
 // AUDIT LOGS & JOURNAUX
 // ─────────────────────────────────────────────
@@ -1505,19 +1525,28 @@ type AppSettings struct {
 }
 
 func (a *App) GetSettings() (*AppSettings, error) {
+	// Default backup dir: user Downloads folder
+	defaultBackupDir := filepath.Join(a.dataDir, "backups")
+	if homeDir, err := os.UserHomeDir(); err == nil {
+		defaultBackupDir = filepath.Join(homeDir, "Downloads", "NetworkTools_Backups")
+	}
+
 	settingsPath := filepath.Join(a.dataDir, "settings.json")
 	data, err := os.ReadFile(settingsPath)
 	if err != nil {
 		return &AppSettings{
 			Theme:            "dark",
 			Language:         "fr",
-			BackupDir:        filepath.Join(a.dataDir, "backups"),
+			BackupDir:        defaultBackupDir,
 			MaxWorkers:       50,
 			LogRetentionDays: 90,
 		}, nil
 	}
 	var settings AppSettings
 	json.Unmarshal(data, &settings)
+	if settings.BackupDir == "" {
+		settings.BackupDir = defaultBackupDir
+	}
 	return &settings, nil
 }
 
@@ -1527,7 +1556,14 @@ func (a *App) SaveSettings(settings AppSettings) error {
 		return err
 	}
 	settingsPath := filepath.Join(a.dataDir, "settings.json")
-	return os.WriteFile(settingsPath, data, 0600)
+	if err := os.WriteFile(settingsPath, data, 0600); err != nil {
+		return err
+	}
+	// Apply backup dir change to the running manager
+	if settings.BackupDir != "" && a.backupMgr != nil {
+		a.backupMgr.SetBackupDir(settings.BackupDir)
+	}
+	return nil
 }
 
 // ─────────────────────────────────────────────
@@ -1569,6 +1605,14 @@ func (a *App) runScheduledJob(ctx context.Context, jobType string, payload map[s
 			err = fmt.Errorf("playbook job missing playbook_id or device_ids")
 		} else {
 			_, err = a.RunPlaybook(PlaybookRunRequest{PlaybookID: playbookID, DeviceIDs: deviceIDs})
+		}
+	case "ssh_command":
+		deviceIDs := extractStringSlice(payload, "device_ids")
+		commands := extractStringSlice(payload, "commands")
+		if len(deviceIDs) == 0 || len(commands) == 0 {
+			err = fmt.Errorf("ssh_command job missing device_ids or commands")
+		} else {
+			_, err = a.RunSSHCommands(SSHCommandRequest{DeviceIDs: deviceIDs, Commands: commands})
 		}
 	default:
 		err = fmt.Errorf("unknown job type: %s", jobType)

@@ -126,6 +126,10 @@ export function RunSSHCommands(arg1) {
   return window['go']['main']['App']['RunSSHCommands'](arg1);
 }
 
+export function RunScheduledJobNow(arg1) {
+  return window['go']['main']['App']['RunScheduledJobNow'](arg1);
+}
+
 export function RunTerminalCommand(arg1, arg2) {
   return window['go']['main']['App']['RunTerminalCommand'](arg1, arg2);
 }

@@ -70,6 +70,8 @@ export function RunPlaybook(arg1:main.PlaybookRunRequest):Promise<Array<playbook
 
 export function RunSSHCommands(arg1:main.SSHCommandRequest):Promise<Array<ssh.Result>>;
 
+export function RunScheduledJobNow(arg1:string):Promise<void>;
+
 export function RunTerminalCommand(arg1:string,arg2:string):Promise<string>;
 
 export function SaveAuditRule(arg1:models.AuditRule):Promise<models.AuditRule>;

@@ -102,10 +102,26 @@ func (s *Scheduler) executeJob(ctx context.Context, job *models.ScheduledJob) {
 	}
 
 	now := time.Now()
-	db.DB.Model(job).Updates(map[string]interface{}{
+	updates := map[string]interface{}{
 		"last_run_at": now,
 		"last_status": status,
-	})
+	}
+
+	// Auto-disable one-time jobs after execution
+	if once, ok := payload["once"]; ok {
+		if onceBool, ok := once.(bool); ok && onceBool {
+			updates["enabled"] = false
+			// Remove from cron scheduler
+			s.mu.Lock()
+			if id, ok := s.entryIDs[job.ID]; ok {
+				s.cron.Remove(id)
+				delete(s.entryIDs, job.ID)
+			}
+			s.mu.Unlock()
+		}
+	}
+
+	db.DB.Model(job).Updates(updates)
 
 	logger.AuditAction(ctx, "job_executed", "scheduled_job", job.ID,
 		fmt.Sprintf(`{"type":"%s","status":"%s"}`, job.JobType, status),

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Play, Trash2, FileCode, BookOpen, ChevronDown, ChevronRight, Copy } from 'lucide-react'
+import { Plus, Play, Trash2, FileCode, BookOpen, ChevronDown, ChevronRight, Copy, Terminal, Code } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import Button from '../components/Button'
 import Modal from '../components/Modal'
@@ -85,7 +85,7 @@ steps:
 description: Collecte les tables de routage et voisinage
 timeout: 90s
 steps:
-  - name: Table ARP
+  - name: Collecte ARP
     command: show arp
     on_error: continue
 
@@ -144,6 +144,32 @@ steps:
   },
 ]
 
+// Convert simple commands to YAML playbook format
+function commandsToYaml(name: string, description: string, commands: string): string {
+  const cmds = commands.split('\n').map(s => s.trim()).filter(Boolean)
+  if (cmds.length === 0) return ''
+  const steps = cmds.map((cmd, i) => `  - name: Commande ${i + 1}
+    command: ${cmd}
+    on_error: continue`).join('\n\n')
+  return `name: ${name || 'Playbook'}
+description: ${description || ''}
+timeout: 60s
+steps:
+${steps}
+`
+}
+
+// Extract commands from YAML content (for switching to simple mode)
+function yamlToCommands(yamlContent: string): string {
+  const lines = yamlContent.split('\n')
+  const commands: string[] = []
+  for (const line of lines) {
+    const match = line.match(/^\s+command:\s*(.+)$/)
+    if (match) commands.push(match[1].trim())
+  }
+  return commands.join('\n')
+}
+
 export default function PlaybookPage() {
   const qc = useQueryClient()
   const [showModal, setShowModal] = useState(false)
@@ -155,6 +181,10 @@ export default function PlaybookPage() {
   const [openSection, setOpenSection] = useState<number | null>(0)
   const [copied, setCopied] = useState<string | null>(null)
 
+  // Simple vs Advanced mode for the editor
+  const [editorMode, setEditorMode] = useState<'simple' | 'advanced'>('simple')
+  const [simpleCommands, setSimpleCommands] = useState('')
+
   const { data: playbooks = [] } = useQuery({
     queryKey: ['playbooks'],
     queryFn: async () => { const m = await getBackend(); return m.GetPlaybooks() },
@@ -165,7 +195,15 @@ export default function PlaybookPage() {
   })
 
   const saveMutation = useMutation({
-    mutationFn: async (pb: any) => { const m = await getBackend(); return m.SavePlaybook(pb) },
+    mutationFn: async (pb: any) => {
+      // In simple mode, convert commands to YAML before saving
+      let content = pb.content
+      if (editorMode === 'simple' && simpleCommands.trim()) {
+        content = commandsToYaml(pb.name, pb.description, simpleCommands)
+      }
+      const m = await getBackend()
+      return m.SavePlaybook({ ...pb, content })
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['playbooks'] }); setShowModal(false) },
   })
   const deleteMutation = useMutation({
@@ -183,8 +221,33 @@ export default function PlaybookPage() {
   const handleCopyTemplate = (template: typeof PLAYBOOK_TEMPLATES[0]) => {
     setCopied(template.name)
     setEditPb({ name: template.name, description: template.description, content: template.content })
+    setEditorMode('advanced')
     setShowModal(true)
     setTimeout(() => setCopied(null), 2000)
+  }
+
+  const openNewSimple = () => {
+    setEditorMode('simple')
+    setSimpleCommands('')
+    setEditPb({ name: '', description: '', content: '' })
+    setShowModal(true)
+  }
+
+  const openNewAdvanced = () => {
+    setEditorMode('advanced')
+    setSimpleCommands('')
+    setEditPb({ content: PLAYBOOK_TEMPLATES[0].content })
+    setShowModal(true)
+  }
+
+  const openEdit = (pb: any) => {
+    const cmds = yamlToCommands(pb.content || '')
+    setSimpleCommands(cmds)
+    // Default to simple mode if it looks like a simple playbook (all on_error: continue, no expect)
+    const hasExpect = (pb.content || '').includes('expect:')
+    setEditorMode(hasExpect ? 'advanced' : 'simple')
+    setEditPb(pb)
+    setShowModal(true)
   }
 
   return (
@@ -199,9 +262,14 @@ export default function PlaybookPage() {
               <BookOpen className="w-3.5 h-3.5" /> Guide & Exemples
             </Button>
             {activeTab === 'playbooks' && (
-              <Button variant="primary" onClick={() => { setEditPb({ content: PLAYBOOK_TEMPLATES[0].content }); setShowModal(true) }}>
-                <Plus className="w-4 h-4" /> Nouveau
-              </Button>
+              <div className="flex gap-1">
+                <Button variant="primary" onClick={openNewSimple}>
+                  <Terminal className="w-4 h-4" /> Commandes rapides
+                </Button>
+                <Button variant="secondary" onClick={openNewAdvanced}>
+                  <Code className="w-4 h-4" /> YAML avancé
+                </Button>
+              </div>
             )}
           </div>
         }
@@ -211,7 +279,7 @@ export default function PlaybookPage() {
         {activeTab === 'playbooks' ? (
           <div className="space-y-4">
             {/* Playbook grid */}
-            <div className="grid grid-cols-3 gap-4 content-start">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 content-start">
               {(playbooks as any[]).map((pb: any) => (
                 <div key={pb.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
                   <div>
@@ -226,7 +294,7 @@ export default function PlaybookPage() {
                     <Button size="sm" variant="primary" onClick={() => { setRunModal(pb); setResults([]) }}>
                       <Play className="w-3.5 h-3.5" /> Run
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => { setEditPb(pb); setShowModal(true) }}>Éditer</Button>
+                    <Button size="sm" variant="ghost" onClick={() => openEdit(pb)}>Éditer</Button>
                     <Button size="sm" variant="ghost" onClick={() => deleteMutation.mutate(pb.id)}>
                       <Trash2 className="w-3.5 h-3.5 text-red-400" />
                     </Button>
@@ -236,7 +304,15 @@ export default function PlaybookPage() {
               {(playbooks as any[]).length === 0 && (
                 <div className="col-span-3 text-center py-16 text-slate-500">
                   <FileCode className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                  <p>Aucun playbook. Créez-en un ou utilisez un exemple du Guide.</p>
+                  <p className="mb-4">Aucun playbook. Créez-en un ou utilisez un exemple du Guide.</p>
+                  <div className="flex justify-center gap-3">
+                    <Button variant="primary" onClick={openNewSimple}>
+                      <Terminal className="w-4 h-4" /> Commandes rapides
+                    </Button>
+                    <Button variant="secondary" onClick={openNewAdvanced}>
+                      <Code className="w-4 h-4" /> YAML avancé
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -298,7 +374,7 @@ steps:
                 <h2 className="text-sm font-semibold text-slate-300">Modèles prêts à l'emploi</h2>
                 <p className="text-xs text-slate-500 mt-0.5">Cliquez sur "Utiliser" pour créer un playbook à partir du modèle</p>
               </div>
-              <div className="grid grid-cols-2 gap-4 p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
                 {PLAYBOOK_TEMPLATES.map((t) => (
                   <div key={t.name} className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 space-y-2">
                     <div className="flex items-start justify-between gap-2">
@@ -329,12 +405,56 @@ steps:
             onChange={e => setEditPb((p: any) => ({ ...p, name: e.target.value }))} />
           <Input label="Description" value={editPb?.description || ''}
             onChange={e => setEditPb((p: any) => ({ ...p, description: e.target.value }))} />
-          <div>
-            <label className="text-xs font-medium text-slate-400">Contenu YAML *</label>
-            <textarea value={editPb?.content || ''} onChange={e => setEditPb((p: any) => ({ ...p, content: e.target.value }))}
-              className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-md p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500 resize-none"
-              rows={14} required />
+
+          {/* Mode toggle */}
+          <div className="flex gap-1 bg-slate-800 rounded-lg p-0.5">
+            <button type="button" onClick={() => {
+              if (editorMode === 'advanced' && editPb?.content) {
+                setSimpleCommands(yamlToCommands(editPb.content))
+              }
+              setEditorMode('simple')
+            }}
+              className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${editorMode === 'simple' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}>
+              <Terminal className="w-3.5 h-3.5" /> Mode simple
+            </button>
+            <button type="button" onClick={() => {
+              if (editorMode === 'simple' && simpleCommands.trim()) {
+                setEditPb((p: any) => ({ ...p, content: commandsToYaml(p?.name || '', p?.description || '', simpleCommands) }))
+              }
+              setEditorMode('advanced')
+            }}
+              className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${editorMode === 'advanced' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}>
+              <Code className="w-3.5 h-3.5" /> Mode avancé (YAML)
+            </button>
           </div>
+
+          {editorMode === 'simple' ? (
+            <div>
+              <label className="text-xs font-medium text-slate-400">
+                Commandes SSH (une par ligne) *
+              </label>
+              <p className="text-xs text-slate-500 mb-1">
+                Saisissez les commandes à exécuter, une par ligne. Le playbook YAML sera généré automatiquement.
+              </p>
+              <textarea value={simpleCommands} onChange={e => setSimpleCommands(e.target.value)}
+                className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-md p-3 text-sm font-mono text-slate-200 focus:outline-none focus:border-blue-500 resize-none"
+                rows={8} required={!editPb?.content}
+                placeholder={"show version\nshow running-config\nshow interfaces brief\nshow vlan brief"} />
+              {simpleCommands.trim() && (
+                <div className="mt-2 p-2 bg-slate-900 rounded text-xs text-slate-500">
+                  {simpleCommands.split('\n').filter(s => s.trim()).length} commande(s) configurée(s)
+                </div>
+              )}
+            </div>
+          ) : (
+            <div>
+              <label className="text-xs font-medium text-slate-400">Contenu YAML *</label>
+              <textarea value={editPb?.content || ''} onChange={e => setEditPb((p: any) => ({ ...p, content: e.target.value }))}
+                className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-md p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500 resize-none"
+                rows={14} required />
+            </div>
+          )}
+
           {saveMutation.error && (
             <p className="text-xs text-red-400">Erreur : {(saveMutation.error as any)?.message}</p>
           )}
