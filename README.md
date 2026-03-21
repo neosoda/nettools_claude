@@ -67,6 +67,12 @@ Stratégie **exec-first / interactive-fallback** : le moteur tente d'abord le ca
 - **Guide intégré** : explication, structure, bonnes pratiques
 - **4 modèles prêts à l'emploi** : inventaire, sécurité, VLAN, diagnostic
 - Exécution multi-équipements avec résultats pas-à-pas
+- **Terminal temps réel** — chaque étape s'affiche en direct pendant l'exécution :
+  - Ligne d'en-tête par équipement (device_start)
+  - Démarrage de chaque step avec la commande envoyée
+  - Sortie SSH brute au fur et à mesure
+  - Indicateur ✓ (vert) / ✗ (rouge) à la fin de chaque step
+  - Résumé final succès/échec par équipement
 
 ### Planificateur
 - Interface **calendrier + horloge** : fréquence (horaire / quotidien / hebdo / mensuel) + heure + minute
