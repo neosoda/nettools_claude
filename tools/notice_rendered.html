@@ -1,0 +1,2205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetworkTools — Notice d'utilisation</title>
+<style>
+
+/* ──────────────────────────────────────────────
+   FONTS
+────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ──────────────────────────────────────────────
+   VARIABLES
+────────────────────────────────────────────── */
+:root {
+  --accent:       #3b82f6;
+  --accent-light: #dbeafe;
+  --accent-dark:  #1d4ed8;
+  --success:      #16a34a;
+  --warn:         #d97706;
+  --danger:       #dc2626;
+  --text:         #1e293b;
+  --text-muted:   #64748b;
+  --border:       #e2e8f0;
+  --bg-code:      #f1f5f9;
+  --bg-note:      #eff6ff;
+  --bg-tip:       #f0fdf4;
+  --bg-warn:      #fffbeb;
+  --header-bg:    #0f172a;
+  --header-accent:#60a5fa;
+  --shadow-sm:    0 1px 3px rgba(0,0,0,.08);
+  --shadow-md:    0 4px 12px rgba(0,0,0,.10);
+  --radius:       8px;
+  --font:         'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Courier New', monospace;
+}
+
+/* ──────────────────────────────────────────────
+   RESET & BASE
+────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 10.5pt; }
+
+body {
+  font-family: var(--font);
+  color: var(--text);
+  background: #fff;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ──────────────────────────────────────────────
+   COVER PAGE
+────────────────────────────────────────────── */
+.cover {
+  background: var(--header-bg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 60px 40px;
+  page-break-after: always;
+  position: relative;
+  overflow: hidden;
+}
+
+.cover::before {
+  content: '';
+  position: absolute;
+  top: -120px; left: -120px;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(59,130,246,.18) 0%, transparent 70%);
+}
+
+.cover::after {
+  content: '';
+  position: absolute;
+  bottom: -80px; right: -80px;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(96,165,250,.12) 0%, transparent 70%);
+}
+
+.cover-logo {
+  font-size: 56pt;
+  margin-bottom: 24px;
+  position: relative; z-index: 1;
+}
+
+.cover-title {
+  font-size: 30pt;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -0.5px;
+  margin-bottom: 12px;
+  position: relative; z-index: 1;
+}
+
+.cover-subtitle {
+  font-size: 13pt;
+  font-weight: 400;
+  color: var(--header-accent);
+  margin-bottom: 48px;
+  position: relative; z-index: 1;
+}
+
+.cover-badges {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 60px;
+  position: relative; z-index: 1;
+}
+
+.badge {
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.15);
+  color: #cbd5e1;
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 8.5pt;
+  font-family: var(--font-mono);
+  backdrop-filter: blur(4px);
+}
+
+.cover-meta {
+  position: absolute;
+  bottom: 40px;
+  left: 0; right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 48px;
+  font-size: 8pt;
+  color: #475569;
+  z-index: 1;
+}
+
+.cover-line {
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--header-accent));
+  border-radius: 2px;
+  margin: 0 auto 32px;
+  position: relative; z-index: 1;
+}
+
+/* ──────────────────────────────────────────────
+   PAGE LAYOUT
+────────────────────────────────────────────── */
+.content {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 0 48px;
+}
+
+/* ──────────────────────────────────────────────
+   TOC PAGE
+────────────────────────────────────────────── */
+.toc-page {
+  page-break-after: always;
+  padding: 48px;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.toc-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--accent);
+}
+
+.toc-header-label {
+  font-size: 18pt;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.toc-entries {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 32px;
+  column-gap: 48px;
+}
+
+.toc-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px dashed var(--border);
+  gap: 8px;
+}
+
+.toc-num {
+  font-size: 7pt;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-light);
+  border-radius: 4px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+
+.toc-label {
+  font-size: 9pt;
+  color: var(--text);
+  flex: 1;
+  font-weight: 500;
+}
+
+/* ──────────────────────────────────────────────
+   SECTION HEADERS
+────────────────────────────────────────────── */
+h1 {
+  font-size: 20pt;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 36px 0 20px;
+  padding-bottom: 12px;
+  border-bottom: 3px solid var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  page-break-before: always;
+}
+
+h1:first-of-type { page-break-before: avoid; }
+
+h1::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 28px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-dark));
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+h2 {
+  font-size: 14pt;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 18px;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+  color: #f1f5f9;
+  border-left: 5px solid var(--header-accent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  page-break-before: always;
+}
+
+h2:first-of-type { page-break-before: avoid; }
+
+h3 {
+  font-size: 11pt;
+  font-weight: 600;
+  color: #334155;
+  margin: 22px 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+h3::before {
+  content: '▸';
+  color: var(--accent);
+  font-size: 9pt;
+}
+
+h4 {
+  font-size: 10pt;
+  font-weight: 600;
+  color: #475569;
+  margin: 16px 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 8pt;
+}
+
+/* ──────────────────────────────────────────────
+   TYPOGRAPHY
+────────────────────────────────────────────── */
+p {
+  margin: 0 0 12px;
+  font-size: 9.5pt;
+}
+
+strong {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+em {
+  color: var(--text-muted);
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+ul, ol {
+  margin: 8px 0 14px 20px;
+  padding: 0;
+}
+
+li {
+  font-size: 9.5pt;
+  margin-bottom: 4px;
+  line-height: 1.6;
+}
+
+li > ul, li > ol {
+  margin: 4px 0 4px 18px;
+}
+
+/* ──────────────────────────────────────────────
+   TABLES
+────────────────────────────────────────────── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0 20px;
+  font-size: 8.5pt;
+  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+thead tr {
+  background: var(--header-bg);
+  color: #f1f5f9;
+}
+
+thead th {
+  padding: 9px 13px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 8pt;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background .1s;
+}
+
+tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+tbody tr:hover {
+  background: var(--accent-light);
+}
+
+tbody td {
+  padding: 8px 13px;
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+tbody td:first-child {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ──────────────────────────────────────────────
+   CODE
+────────────────────────────────────────────── */
+code {
+  font-family: var(--font-mono);
+  font-size: 8.5pt;
+  background: var(--bg-code);
+  color: #c026d3;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid #e9d5ff;
+}
+
+pre {
+  background: #0f172a;
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin: 12px 0 18px;
+  overflow-x: auto;
+  box-shadow: var(--shadow-md);
+  position: relative;
+}
+
+pre::before {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 16px 0 0 #f59e0b, 32px 0 0 #22c55e;
+  position: absolute;
+  top: 12px;
+  left: 16px;
+}
+
+pre code {
+  font-family: var(--font-mono);
+  font-size: 8pt;
+  background: transparent;
+  color: #e2e8f0;
+  padding: 0;
+  border: none;
+  display: block;
+  padding-top: 18px;
+  line-height: 1.65;
+  white-space: pre;
+}
+
+/* Syntax highlighting (simple) */
+pre code .c  { color: #64748b; } /* comments */
+pre code .k  { color: #93c5fd; } /* keywords */
+pre code .s  { color: #86efac; } /* strings */
+pre code .n  { color: #fde68a; } /* numbers */
+
+/* ──────────────────────────────────────────────
+   CALLOUTS
+────────────────────────────────────────────── */
+blockquote {
+  background: var(--bg-note);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 12px 16px;
+  margin: 14px 0 18px;
+  font-size: 9pt;
+  color: #1e40af;
+  box-shadow: var(--shadow-sm);
+}
+
+blockquote p {
+  margin: 0;
+}
+
+blockquote p:first-child::before {
+  content: '💡 ';
+}
+
+blockquote strong {
+  color: #1d4ed8;
+}
+
+/* ──────────────────────────────────────────────
+   SECTION DIVIDERS
+────────────────────────────────────────────── */
+hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+  margin: 32px 0;
+}
+
+/* ──────────────────────────────────────────────
+   SPECIAL CALLOUT BOXES
+────────────────────────────────────────────── */
+.callout {
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin: 14px 0 18px;
+  font-size: 9pt;
+}
+
+.callout-tip    { background: var(--bg-tip);  border-left: 4px solid #16a34a; color: #14532d; }
+.callout-warn   { background: var(--bg-warn); border-left: 4px solid #d97706; color: #78350f; }
+.callout-danger { background: #fef2f2;         border-left: 4px solid #dc2626; color: #7f1d1d; }
+
+/* ──────────────────────────────────────────────
+   PRINT
+────────────────────────────────────────────── */
+@media print {
+  @page {
+    margin: 18mm 16mm 20mm;
+    size: A4;
+
+    @top-center {
+      content: "NetworkTools — Notice d'utilisation";
+      font-family: 'Inter', sans-serif;
+      font-size: 7.5pt;
+      color: #94a3b8;
+    }
+
+    @bottom-right {
+      content: counter(page);
+      font-family: 'Inter', sans-serif;
+      font-size: 7.5pt;
+      color: #94a3b8;
+    }
+
+    @bottom-left {
+      content: "Région Grand Est · Administration réseau";
+      font-family: 'Inter', sans-serif;
+      font-size: 7pt;
+      color: #94a3b8;
+    }
+  }
+
+  @page :first {
+    @top-center   { content: none; }
+    @bottom-right { content: none; }
+    @bottom-left  { content: none; }
+    margin: 0;
+  }
+
+  body   { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  h1     { page-break-before: always; }
+  h1:first-of-type { page-break-before: avoid; }
+  h2     { page-break-before: always; }
+  h2:first-of-type { page-break-before: avoid; }
+  h2, h3 { page-break-after: avoid; }
+  table  { page-break-inside: avoid; }
+  pre    { page-break-inside: avoid; }
+  .cover { page-break-after: always; }
+  .toc-page { page-break-after: always; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════ COVER PAGE ══════════════════════ -->
+<div class="cover">
+  <div class="cover-logo">🌐</div>
+  <div class="cover-title">NetworkTools</div>
+  <div class="cover-line"></div>
+  <div class="cover-subtitle">Notice d'utilisation complète</div>
+  <div class="cover-badges">
+    <span class="badge">Wails v2</span>
+    <span class="badge">Go 1.25+</span>
+    <span class="badge">React 18</span>
+    <span class="badge">SQLite</span>
+    <span class="badge">SSH multi-vendor</span>
+    <span class="badge">SNMP v2c/v3</span>
+  </div>
+  <div class="cover-meta">
+    <span>Région Grand Est — Administration réseau</span>
+    <span>Version 2025</span>
+    <span>Usage interne</span>
+  </div>
+</div>
+
+<!-- ══════════════════════ TOC PAGE ══════════════════════ -->
+<div class="toc-page">
+  <div class="toc-header">
+    <span style="font-size:20pt">📑</span>
+    <span class="toc-header-label">Table des matières</span>
+  </div>
+  <div class="toc-entries">
+    <div class="toc-item"><span class="toc-num">01</span><span class="toc-label">Présentation générale</span></div>
+    <div class="toc-item"><span class="toc-num">02</span><span class="toc-label">Installation et premier lancement</span></div>
+    <div class="toc-item"><span class="toc-num">03</span><span class="toc-label">Interface générale</span></div>
+    <div class="toc-item"><span class="toc-num">04</span><span class="toc-label">Gestion des credentials</span></div>
+    <div class="toc-item"><span class="toc-num">05</span><span class="toc-label">Découverte réseau (SNMP)</span></div>
+    <div class="toc-item"><span class="toc-num">06</span><span class="toc-label">Inventaire des équipements</span></div>
+    <div class="toc-item"><span class="toc-num">07</span><span class="toc-label">Backups SSH</span></div>
+    <div class="toc-item"><span class="toc-num">08</span><span class="toc-label">Comparateur de configurations</span></div>
+    <div class="toc-item"><span class="toc-num">09</span><span class="toc-label">Audit de conformité</span></div>
+    <div class="toc-item"><span class="toc-num">10</span><span class="toc-label">Playbooks SSH</span></div>
+    <div class="toc-item"><span class="toc-num">11</span><span class="toc-label">Planificateur de tâches</span></div>
+    <div class="toc-item"><span class="toc-num">12</span><span class="toc-label">Journaux d'activité</span></div>
+    <div class="toc-item"><span class="toc-num">13</span><span class="toc-label">Topologie réseau</span></div>
+    <div class="toc-item"><span class="toc-num">14</span><span class="toc-label">Paramètres</span></div>
+    <div class="toc-item"><span class="toc-num">15</span><span class="toc-label">Workflows types</span></div>
+    <div class="toc-item"><span class="toc-num">16</span><span class="toc-label">Référence technique</span></div>
+    <div class="toc-item"><span class="toc-num">17</span><span class="toc-label">Dépannage</span></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ CONTENT ══════════════════════ -->
+<div class="content">
+
+<blockquote>
+<p>Application de gestion réseau pour administrateurs système
+Wails v2 · Go · React · SQLite · Windows</p>
+</blockquote>
+<hr />
+
+<ol>
+<li><a href="#1-présentation-générale">Présentation générale</a></li>
+<li><a href="#2-installation-et-premier-lancement">Installation et premier lancement</a></li>
+<li><a href="#3-interface-générale">Interface générale</a></li>
+<li><a href="#4-gestion-des-credentials">Gestion des credentials</a></li>
+<li><a href="#5-découverte-réseau-snmp">Découverte réseau (SNMP)</a></li>
+<li><a href="#6-inventaire-des-équipements">Inventaire des équipements</a></li>
+<li><a href="#7-backups-ssh">Backups SSH</a></li>
+<li><a href="#8-comparateur-de-configurations">Comparateur de configurations</a></li>
+<li><a href="#9-audit-de-conformité">Audit de conformité</a></li>
+<li><a href="#10-playbooks-ssh">Playbooks SSH</a></li>
+<li><a href="#11-planificateur-de-tâches">Planificateur de tâches</a></li>
+<li><a href="#12-journaux-dactivité">Journaux d'activité</a></li>
+<li><a href="#13-topologie-réseau">Topologie réseau</a></li>
+<li><a href="#14-paramètres">Paramètres</a></li>
+<li><a href="#15-workflows-types">Workflows types</a></li>
+<li><a href="#16-référence-technique">Référence technique</a></li>
+<li><a href="#17-dépannage">Dépannage</a></li>
+</ol>
+<hr />
+<h2 id="1-presentation-generale">1. Présentation générale</h2>
+<h3 id="quest-ce-que-networktools">Qu'est-ce que NetworkTools ?</h3>
+<p>NetworkTools est une application desktop autonome pour <strong>Windows</strong> destinée aux administrateurs réseau. Elle regroupe dans une seule interface les opérations les plus courantes de gestion d'infrastructure réseau :</p>
+<ul>
+<li><strong>Découverte</strong> des équipements par scan SNMP</li>
+<li><strong>Sauvegarde</strong> automatisée des configurations (running/startup)</li>
+<li><strong>Audit de conformité</strong> par règles regex configurables</li>
+<li><strong>Comparaison</strong> de configurations (diff ligne à ligne)</li>
+<li><strong>Automatisation</strong> par playbooks SSH en YAML</li>
+<li><strong>Planification</strong> de tâches récurrentes (cron)</li>
+<li><strong>Journalisation</strong> complète de toutes les opérations</li>
+</ul>
+<h3 id="architecture-technique-pour-les-curieux">Architecture technique (pour les curieux)</h3>
+<pre><code>Couche          Technologie
+─────────────── ─────────────────────────────────
+Frontend        React 18 + TypeScript + Tailwind CSS
+Backend         Go (compilé dans le même binaire)
+Communication   Wails v2 (IPC natif WebView2)
+Base de données SQLite (GORM, mode WAL)
+Chiffrement     DPAPI Windows (credentials)
+SNMP            gosnmp v2c/v3
+SSH             golang.org/x/crypto/ssh
+Logs            zerolog (JSON)
+Planificateur   robfig/cron v3
+</code></pre>
+<p>L'application est un <strong>unique fichier <code>.exe</code></strong> embarquant à la fois le frontend React et le backend Go. Aucun serveur, aucune dépendance réseau externe : tout tourne localement.</p>
+<h3 id="donnees-stockees">Données stockées</h3>
+<p>Tout est conservé dans <code>%APPDATA%\NetworkTools\</code> :</p>
+<pre><code>%APPDATA%\NetworkTools\
+├── networktools.db          Base de données SQLite
+├── settings.json            Préférences utilisateur
+├── backups\                 Fichiers de configuration sauvegardés
+└── logs\
+    └── networktools-YYYY-MM.log   Journaux mensuels
+</code></pre>
+<hr />
+<h2 id="2-installation-et-premier-lancement">2. Installation et premier lancement</h2>
+<h3 id="prerequis">Prérequis</h3>
+<table>
+<thead>
+<tr>
+<th>Composant</th>
+<th>Version</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Windows</td>
+<td>10 / 11</td>
+<td>64 bits obligatoire</td>
+</tr>
+<tr>
+<td>WebView2 Runtime</td>
+<td>Toute version récente</td>
+<td>Pré-installé sur Windows 11</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>WebView2</strong> est le moteur de rendu utilisé par Microsoft Edge. Il est présent par défaut sur Windows 11 et Windows 10 récent. Si absent, le télécharger sur le site Microsoft.</p>
+</blockquote>
+<h3 id="installation">Installation</h3>
+<ol>
+<li>Copier <code>Nettools_claude.exe</code> dans le dossier de votre choix</li>
+<li>Double-cliquer pour lancer — aucune installation requise</li>
+<li>Au premier lancement, Windows Defender peut afficher un avertissement : cliquer sur <strong>Informations complémentaires → Exécuter quand même</strong></li>
+</ol>
+<h3 id="premier-lancement-configuration-initiale-recommandee">Premier lancement : configuration initiale recommandée</h3>
+<pre><code>1. Ouvrir les Paramètres (icône engrenage, barre latérale)
+2. Configurer le répertoire de backup
+3. Créer un credential SSH/SNMP
+4. Lancer un premier scan SNMP de test
+</code></pre>
+<hr />
+<h2 id="3-interface-generale">3. Interface générale</h2>
+<h3 id="navigation">Navigation</h3>
+<p>La barre latérale gauche donne accès à toutes les sections :</p>
+<table>
+<thead>
+<tr>
+<th>Icône</th>
+<th>Section</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>📡</td>
+<td>Scan réseau</td>
+<td>Découverte SNMP</td>
+</tr>
+<tr>
+<td>📋</td>
+<td>Inventaire</td>
+<td>Gestion des équipements</td>
+</tr>
+<tr>
+<td>💾</td>
+<td>Backups</td>
+<td>Sauvegarde SSH</td>
+</tr>
+<tr>
+<td>↔️</td>
+<td>Diff</td>
+<td>Comparaison de configs</td>
+</tr>
+<tr>
+<td>✔️</td>
+<td>Audit</td>
+<td>Conformité</td>
+</tr>
+<tr>
+<td>▶️</td>
+<td>Playbooks</td>
+<td>Automatisation SSH</td>
+</tr>
+<tr>
+<td>🕐</td>
+<td>Planificateur</td>
+<td>Tâches programmées</td>
+</tr>
+<tr>
+<td>📜</td>
+<td>Journaux</td>
+<td>Logs et événements</td>
+</tr>
+<tr>
+<td>🌐</td>
+<td>Topologie</td>
+<td>Carte réseau</td>
+</tr>
+<tr>
+<td>⚙️</td>
+<td>Paramètres</td>
+<td>Configuration</td>
+</tr>
+</tbody>
+</table>
+<h3 id="credential-actif-sidebar">Credential actif (sidebar)</h3>
+<p>En bas de la barre latérale, un sélecteur affiche le <strong>credential global actif</strong>. Ce credential est utilisé par défaut pour toutes les opérations SSH et SNMP qui n'en spécifient pas un explicitement. Changer ce sélecteur affecte toutes les pages instantanément.</p>
+<h3 id="notifications">Notifications</h3>
+<p>Des toasts (notifications courtes) apparaissent en haut à droite pour confirmer les actions ou signaler les erreurs. Ils disparaissent automatiquement après quelques secondes.</p>
+<hr />
+<h2 id="4-gestion-des-credentials">4. Gestion des credentials</h2>
+<blockquote>
+<p><strong>Page :</strong> Paramètres → onglet Credentials</p>
+</blockquote>
+<p>Les credentials stockent les identifiants SSH et/ou SNMP de manière <strong>chiffrée</strong> (DPAPI Windows). Les mots de passe ne sont jamais stockés en clair.</p>
+<h3 id="creer-un-credential">Créer un credential</h3>
+<p>Cliquer sur <strong>Ajouter</strong> (icône <code>+</code>) puis remplir :</p>
+<p><strong>Champs SSH :</strong></p>
+<table>
+<thead>
+<tr>
+<th>Champ</th>
+<th>Obligatoire</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nom</td>
+<td>✓</td>
+<td>Identifiant lisible (ex: <code>admin-aruba</code>)</td>
+</tr>
+<tr>
+<td>Nom d'utilisateur SSH</td>
+<td>—</td>
+<td>Login SSH</td>
+</tr>
+<tr>
+<td>Mot de passe SSH</td>
+<td>—</td>
+<td>Laissé vide = authentification par clé</td>
+</tr>
+<tr>
+<td>Clé privée SSH</td>
+<td>—</td>
+<td>Clé RSA/Ed25519 en PEM</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Champs SNMP :</strong></p>
+<table>
+<thead>
+<tr>
+<th>Champ</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Version SNMP</td>
+<td><code>v2c</code> (communauté) ou <code>v3</code> (authentifié)</td>
+</tr>
+<tr>
+<td>Communauté</td>
+<td>Pour v2c (ex: <code>TICE</code>, <code>public</code>)</td>
+</tr>
+<tr>
+<td>Utilisateur v3</td>
+<td>Pour SNMPv3 uniquement</td>
+</tr>
+<tr>
+<td>Auth Protocol</td>
+<td>SHA ou MD5</td>
+</tr>
+<tr>
+<td>Auth Key</td>
+<td>Clé d'authentification v3</td>
+</tr>
+<tr>
+<td>Privacy Protocol</td>
+<td>AES ou DES</td>
+</tr>
+<tr>
+<td>Privacy Key</td>
+<td>Clé de chiffrement v3</td>
+</tr>
+</tbody>
+</table>
+<div class="callout callout-tip">
+<p><strong>Conseil :</strong> Un même credential peut contenir à la fois des infos SSH et SNMP. Créer un credential <code>admin-global</code> avec les deux pour simplifier la configuration.</p>
+</div>
+<h3 id="credential-global">Credential global</h3>
+<p>Cliquer sur l'icône <strong>étoile</strong> ou <strong>épingle</strong> d'un credential pour le définir comme credential global. Il sera pré-sélectionné dans toutes les pages.</p>
+<h3 id="modifier-un-credential">Modifier un credential</h3>
+<p>En cliquant Éditer, les champs de mots de passe affichent <code>(inchangé)</code> — laisser vide pour ne pas modifier la valeur chiffrée existante.</p>
+<hr />
+<h2 id="5-decouverte-reseau-snmp">5. Découverte réseau (SNMP)</h2>
+<blockquote>
+<p><strong>Page :</strong> Scan réseau</p>
+</blockquote>
+<p>Le scanner SNMP interroge les équipements réseau pour collecter leurs métadonnées (nom, modèle, firmware, uptime...) et les enregistrer dans l'inventaire.</p>
+<h3 id="modes-de-scan">Modes de scan</h3>
+<h4 id="mode-switches-rapide">Mode Switches (rapide)</h4>
+<p>Cible automatiquement les IPs <code>.1</code> à <code>.95</code> et <code>.254</code> d'un sous-réseau <code>/24</code>. Adapté à une infrastructure où les switchs occupent des IPs basses.</p>
+<pre><code>Préfixe réseau : 10.113.76
+→ Scanne 10.113.76.1 à 10.113.76.95 + 10.113.76.254
+</code></pre>
+<h4 id="mode-complet-24">Mode Complet (/24)</h4>
+<p>Scanne les 254 IPs d'un sous-réseau <code>/24</code>.</p>
+<pre><code>Préfixe réseau : 10.113.76
+→ Scanne 10.113.76.1 à 10.113.76.254
+</code></pre>
+<h4 id="mode-cidr-personnalise">Mode CIDR (personnalisé)</h4>
+<p>Permet n'importe quelle plage CIDR.</p>
+<pre><code>Exemples :
+10.113.76.0/24   → 254 IPs
+10.0.0.0/22      → 1022 IPs
+192.168.1.100/32 → 1 IP
+</code></pre>
+<h4 id="liste-dips-manuelle">Liste d'IPs manuelle</h4>
+<p>Saisir les IPs directement, séparées par des virgules, espaces ou retours à la ligne.</p>
+<pre><code>10.113.76.10, 10.113.76.11
+10.113.76.20
+10.113.77.1
+</code></pre>
+<h3 id="parametres-de-scan">Paramètres de scan</h3>
+<table>
+<thead>
+<tr>
+<th>Paramètre</th>
+<th>Défaut</th>
+<th>Conseil</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Communauté SNMP</td>
+<td>TICE</td>
+<td>Vérifier avec l'équipe réseau</td>
+</tr>
+<tr>
+<td>Timeout par IP</td>
+<td>3 s</td>
+<td>Augmenter sur liens WAN lents</td>
+</tr>
+<tr>
+<td>Workers parallèles</td>
+<td>10</td>
+<td>Max 50 recommandé pour éviter la congestion</td>
+</tr>
+<tr>
+<td>Credential</td>
+<td>Global</td>
+<td>Sélectionner un credential v3 si v2c refusé</td>
+</tr>
+</tbody>
+</table>
+<div class="callout callout-warn">
+<p><strong>Attention :</strong> Trop de workers sur un réseau lent ou via VPN peut provoquer des timeouts. Commencer avec 10 workers.</p>
+</div>
+<h3 id="lancement-et-suivi">Lancement et suivi</h3>
+<ol>
+<li>Configurer les paramètres</li>
+<li>Cliquer <strong>Lancer le scan</strong></li>
+<li>La barre de progression indique l'avancement en temps réel (<code>X / Y IPs</code>)</li>
+<li>Le bouton <strong>Stop</strong> arrête immédiatement le scan en cours</li>
+<li>Les équipements découverts s'affichent dans le tableau</li>
+</ol>
+<h3 id="resultats-du-scan">Résultats du scan</h3>
+<p>Chaque ligne du tableau affiche :</p>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IP</td>
+<td>Adresse IP de l'équipement</td>
+</tr>
+<tr>
+<td>Hostname</td>
+<td>Valeur sysName SNMP</td>
+</tr>
+<tr>
+<td>MAC</td>
+<td>Adresse MAC (si disponible)</td>
+</tr>
+<tr>
+<td>Fabricant</td>
+<td>Détecté depuis sysDescr</td>
+</tr>
+<tr>
+<td>Modèle</td>
+<td>Modèle exact</td>
+</tr>
+<tr>
+<td>Firmware</td>
+<td>Version OS/firmware</td>
+</tr>
+<tr>
+<td>Uptime</td>
+<td>Temps depuis dernier redémarrage</td>
+</tr>
+<tr>
+<td>Localisation</td>
+<td>Valeur sysLocation SNMP</td>
+</tr>
+</tbody>
+</table>
+<h3 id="export-excel">Export Excel</h3>
+<p>Cliquer <strong>Exporter Excel</strong> pour générer un fichier <code>.xlsx</code> avec :
+- En-têtes colorés
+- Lignes alternées (zèbre)
+- Feuille de résumé par fabricant</p>
+<h3 id="diagnostic-ip-individuel">Diagnostic IP individuel</h3>
+<p>Le champ <strong>Tester une IP</strong> permet de tester la connectivité SNMP d'une seule adresse :
+- Teste automatiquement v2c → v1 → communauté <code>public</code> en fallback
+- Retourne les OIDs bruts collectés
+- Utile pour diagnostiquer un équipement récalcitrant</p>
+<hr />
+<h2 id="6-inventaire-des-equipements">6. Inventaire des équipements</h2>
+<blockquote>
+<p><strong>Page :</strong> Inventaire</p>
+</blockquote>
+<p>L'inventaire est la base de données centrale de tous les équipements connus. Les scans SNMP y ajoutent automatiquement les équipements découverts.</p>
+<h3 id="tableau-des-equipements">Tableau des équipements</h3>
+<p>La liste affiche IP, hostname, fabricant, modèle, localisation et date de dernière vue. Utiliser le champ <strong>Recherche</strong> pour filtrer par IP ou hostname.</p>
+<h3 id="ajouter-un-equipement-manuellement">Ajouter un équipement manuellement</h3>
+<p>Cliquer <strong>Ajouter</strong> et remplir :</p>
+<table>
+<thead>
+<tr>
+<th>Champ</th>
+<th>Obligatoire</th>
+<th>Exemple</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Adresse IP</td>
+<td>✓</td>
+<td><code>10.113.76.10</code></td>
+</tr>
+<tr>
+<td>Hostname</td>
+<td>—</td>
+<td><code>SW-SALLE-A</code></td>
+</tr>
+<tr>
+<td>Fabricant</td>
+<td>—</td>
+<td><code>aruba</code>, <code>cisco</code>, <code>allied</code>...</td>
+</tr>
+<tr>
+<td>Modèle</td>
+<td>—</td>
+<td><code>2930F</code></td>
+</tr>
+<tr>
+<td>Port SSH</td>
+<td>—</td>
+<td><code>22</code> (défaut)</td>
+</tr>
+<tr>
+<td>Localisation</td>
+<td>—</td>
+<td><code>Bâtiment A / Salle réseau</code></td>
+</tr>
+<tr>
+<td>Credential</td>
+<td>—</td>
+<td>Sélectionner depuis la liste</td>
+</tr>
+</tbody>
+</table>
+<h3 id="modifier-un-equipement">Modifier un équipement</h3>
+<p>Cliquer l'icône <strong>crayon</strong> pour éditer les informations. Le credential assigné ici sera utilisé par défaut pour les backups et les commandes SSH sur cet équipement.</p>
+<h3 id="tester-la-connexion-ssh">Tester la connexion SSH</h3>
+<p>L'icône <strong>prise électrique</strong> lance un test de connexion SSH sur l'équipement. Un toast vert confirme le succès, rouge indique l'erreur avec le message exact.</p>
+<div class="callout callout-tip">
+<p><strong>Conseil :</strong> Tester la connexion après avoir assigné un credential pour valider la configuration avant un backup.</p>
+</div>
+<h3 id="vider-linventaire">Vider l'inventaire</h3>
+<p>Le bouton <strong>Vider l'inventaire</strong> supprime tous les équipements après confirmation. Cette action est irréversible.</p>
+<hr />
+<h2 id="7-backups-ssh">7. Backups SSH</h2>
+<blockquote>
+<p><strong>Page :</strong> Backups</p>
+</blockquote>
+<p>Le gestionnaire de backups se connecte en SSH aux équipements et sauvegarde leur configuration de manière automatique, propre et reproductible.</p>
+<h3 id="fonctionnement-technique">Fonctionnement technique</h3>
+<p>Le moteur utilise une stratégie <strong>exec-first / interactive-fallback</strong> :</p>
+<ol>
+<li><strong>Tentative exec</strong> : connexion SSH sans PTY (canal exec), sortie propre sans pagination</li>
+<li><strong>Fallback interactif</strong> : si l'équipement refuse le canal exec, bascule sur un shell PTY interactif</li>
+<li><strong>Désactivation de la pagination</strong> : commande vendor-spécifique envoyée avant la récupération de config</li>
+<li><strong>Nettoyage</strong> : suppression des artefacts (prompts, echo de commande, séquences de pagination)</li>
+</ol>
+<h3 id="support-multi-vendor">Support multi-vendor</h3>
+<table>
+<thead>
+<tr>
+<th>Fabricant</th>
+<th>Commande config</th>
+<th>Désactivation pagination</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cisco IOS/XE</td>
+<td><code>show running-config</code></td>
+<td><code>terminal length 0</code></td>
+<td>Canal exec préféré</td>
+</tr>
+<tr>
+<td>Aruba AOS-S</td>
+<td><code>show running-config</code></td>
+<td><code>no page</code></td>
+<td>Exec non supporté → interactif</td>
+</tr>
+<tr>
+<td>HP ProCurve</td>
+<td><code>show running-config</code></td>
+<td><code>no page</code></td>
+<td></td>
+</tr>
+<tr>
+<td>HPE Comware / H3C</td>
+<td><code>display current-configuration</code></td>
+<td><code>screen-length 0 temporary</code></td>
+<td></td>
+</tr>
+<tr>
+<td>Huawei VRP</td>
+<td><code>display current-configuration</code></td>
+<td><code>screen-length 0 temporary</code></td>
+<td></td>
+</tr>
+<tr>
+<td>Allied Telesis</td>
+<td><code>show running-config</code></td>
+<td><code>terminal length 0</code></td>
+<td>AlliedWare Plus</td>
+</tr>
+<tr>
+<td>Fortinet FortiOS</td>
+<td><code>show full-configuration</code></td>
+<td>—</td>
+<td>Pas de pagination native</td>
+</tr>
+<tr>
+<td>Unknown</td>
+<td><code>show running-config</code></td>
+<td>—</td>
+<td>Détection auto depuis banner SSH/MOTD</td>
+</tr>
+</tbody>
+</table>
+<h4 id="detection-automatique-du-vendor">Détection automatique du vendor</h4>
+<p>Si un équipement est marqué <strong>Unknown</strong>, le moteur détecte automatiquement le fabricant depuis :
+1. La chaîne de version SSH server (<code>SSH-2.0-Cisco-...</code>, <code>SSH-2.0-HuaweiSSH</code>...)
+2. Le MOTD initial du shell interactif</p>
+<h3 id="lancer-un-backup">Lancer un backup</h3>
+<h4 id="etape-1-choisir-le-type-de-configuration">Étape 1 : Choisir le type de configuration</h4>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+<th>Commande</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Running config</td>
+<td>Configuration active en mémoire</td>
+<td>Varie par vendor</td>
+</tr>
+<tr>
+<td>Startup config</td>
+<td>Configuration persistée (après <code>write memory</code>)</td>
+<td><code>show startup-config</code></td>
+</tr>
+</tbody>
+</table>
+<div class="callout callout-tip">
+<p><strong>Conseil :</strong> Toujours faire un backup <strong>running</strong> pour avoir l'état réel. Le startup peut différer si des changements non sauvegardés existent.</p>
+</div>
+<h4 id="etape-2-selectionner-les-equipements">Étape 2 : Sélectionner les équipements</h4>
+<p><strong>Mode Manuel :</strong> Coller les IPs séparées par virgule/point-virgule/retour ligne.</p>
+<p><strong>Mode Dernier scan :</strong> Affiche les équipements du dernier scan SNMP avec des cases à cocher. Pratique pour cibler un sous-réseau entier.</p>
+<h4 id="etape-3-credentials">Étape 3 : Credentials</h4>
+<ul>
+<li>Si un credential global est actif : il est utilisé automatiquement</li>
+<li>Sinon : remplir les champs Identifiant/Mot de passe SSH en ligne</li>
+</ul>
+<h4 id="etape-4-lancer">Étape 4 : Lancer</h4>
+<p>Cliquer <strong>Lancer le backup</strong>. La progression s'affiche en temps réel :
+- Barre globale (<code>X / Y équipements</code>)
+- Grille par équipement avec :
+  - ⏳ En cours (spinner)
+  - ✓ Succès (vert)
+  - ✗ Échec + message d'erreur (rouge)</p>
+<h3 id="historique-des-backups">Historique des backups</h3>
+<p>Le sélecteur d'équipement en bas de page affiche l'historique de tous les backups :</p>
+<table>
+<thead>
+<tr>
+<th>Colonne</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Date</td>
+<td>Horodatage du backup</td>
+</tr>
+<tr>
+<td>Type</td>
+<td>Running / Startup</td>
+</tr>
+<tr>
+<td>Statut</td>
+<td>Succès / Échec</td>
+</tr>
+<tr>
+<td>Taille</td>
+<td>Taille du fichier</td>
+</tr>
+<tr>
+<td>Durée</td>
+<td>Temps de récupération</td>
+</tr>
+<tr>
+<td>👁️</td>
+<td>Visualiser le contenu</td>
+</tr>
+<tr>
+<td>💻</td>
+<td>Ouvrir le terminal SSH</td>
+</tr>
+</tbody>
+</table>
+<h3 id="visualiser-un-backup">Visualiser un backup</h3>
+<p>L'icône œil ouvre le contenu brut du fichier de configuration dans une fenêtre modale scrollable.</p>
+<h3 id="terminal-ssh-interactif">Terminal SSH interactif</h3>
+<p>L'icône terminal ouvre une console SSH sur l'équipement. Utiliser pour :
+- Diagnostiquer un équipement
+- Vérifier une configuration spécifique
+- Exécuter des commandes non couvertes par les backups</p>
+<p><strong>Suggestions rapides disponibles :</strong>
+<code>show version</code> · <code>show running-config</code> · <code>show interfaces</code> · <code>show vlan</code> · <code>show ip route</code> · <code>show arp</code></p>
+<p>La sortie s'affiche en temps réel (fond noir, texte vert pour succès, rouge pour erreur).</p>
+<hr />
+<h2 id="8-comparateur-de-configurations">8. Comparateur de configurations</h2>
+<blockquote>
+<p><strong>Page :</strong> Diff</p>
+</blockquote>
+<p>Le comparateur permet de visualiser les différences ligne à ligne entre deux configurations.</p>
+<h3 id="modes-de-comparaison">Modes de comparaison</h3>
+<h4 id="mode-texte">Mode Texte</h4>
+<p>Coller ou importer deux blocs de configuration :
+- Glisser-déposer des fichiers <code>.txt</code>, <code>.cfg</code>, <code>.conf</code>, <code>.log</code>
+- Coller directement dans les zones de texte
+- Bouton de chargement de fichier</p>
+<h4 id="mode-backup">Mode Backup</h4>
+<p>Comparer deux sauvegardes d'un même équipement :
+1. Sélectionner l'équipement
+2. Choisir le backup A (référence)
+3. Choisir le backup B (version à comparer)
+4. Cliquer <strong>Comparer</strong></p>
+<h3 id="options-de-filtrage">Options de filtrage</h3>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ignorer la casse</td>
+<td><code>VLAN</code> = <code>vlan</code></td>
+</tr>
+<tr>
+<td>Ignorer les espaces</td>
+<td>Indentation ignorée</td>
+</tr>
+<tr>
+<td>Trim trailing</td>
+<td>Espaces de fin de ligne supprimés</td>
+</tr>
+<tr>
+<td>Changements seulement</td>
+<td>N'affiche que les lignes ajoutées/supprimées</td>
+</tr>
+<tr>
+<td>Filtres regex</td>
+<td>Ignorer des patterns (un par ligne)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Exemples de filtres regex courants :</strong></p>
+<pre><code>^!.*Last configuration change.*    # Ignorer les timestamps Cisco
+^! Generated.*                     # Ignorer l'en-tête de génération
+^ntp clock-period.*                # Ignorer les valeurs NTP auto-calculées
+^\s*#.*                            # Ignorer les commentaires
+</code></pre>
+<h3 id="lecture-du-diff">Lecture du diff</h3>
+<pre><code>  10 | interface GigabitEthernet0/1        (gris = inchangé)
++ 11 | description UPLINK-CORE             (vert = ajouté)
+- 11 | description UPLINK                  (rouge = supprimé)
+  12 | switchport mode trunk               (gris = inchangé)
+</code></pre>
+<p>L'en-tête affiche le résumé : <code>+12 lignes ajoutées  -5 lignes supprimées  =342 lignes inchangées</code></p>
+<h3 id="export-html">Export HTML</h3>
+<p>Le bouton <strong>Exporter HTML</strong> génère un rapport diff standalone avec :
+- Thème sombre
+- Numéros de ligne
+- Statistiques
+- Partageable sans outil tiers (un seul fichier <code>.html</code>)</p>
+<hr />
+<h2 id="9-audit-de-conformite">9. Audit de conformité</h2>
+<blockquote>
+<p><strong>Page :</strong> Audit</p>
+</blockquote>
+<p>L'audit vérifie si les configurations des équipements respectent un ensemble de règles définies par l'administrateur.</p>
+<h3 id="concept-des-regles">Concept des règles</h3>
+<p>Chaque règle est un <strong>pattern regex</strong> appliqué sur le texte de la configuration. Elle peut :
+- Exiger la <strong>présence</strong> d'un pattern (<code>doit contenir</code>)
+- Exiger l'<strong>absence</strong> d'un pattern (<code>interdit</code>)</p>
+<p><strong>Exemples de règles :</strong></p>
+<pre><code>Règle : &quot;Chiffrement passwords&quot;
+Pattern : service password-encryption
+Type : Doit contenir
+Sévérité : Critique
+→ Passe si &quot;service password-encryption&quot; est présent dans la config
+
+Règle : &quot;Telnet désactivé&quot;
+Pattern : transport input telnet
+Type : Interdit
+Sévérité : Élevé
+→ Passe si &quot;transport input telnet&quot; est ABSENT de la config
+</code></pre>
+<h3 id="pattern-and-multi-bloc">Pattern AND (multi-bloc)</h3>
+<p>Pour vérifier que <strong>plusieurs éléments sont présents ensemble</strong>, utiliser <code>AND</code> :</p>
+<pre><code>ntp server 10.113.10.1 AND ntp authenticate
+</code></pre>
+<p>→ Passe seulement si les deux chaînes sont présentes dans la config.</p>
+<h3 id="regles-predefinies">Règles prédéfinies</h3>
+<p>22 règles sont incluses, adaptées à l'environnement Aruba/HPE Région Grand Est :</p>
+<table>
+<thead>
+<tr>
+<th>Catégorie</th>
+<th>Exemples de règles</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sécurité</td>
+<td>Chiffrement passwords, désactivation HTTP/DHCP/Telnet, suppression compte <code>manager</code></td>
+</tr>
+<tr>
+<td>SSH</td>
+<td>Service SSH activé, restriction aux utilisateurs autorisés</td>
+</tr>
+<tr>
+<td>Journalisation</td>
+<td>Facility <code>local0</code>, serveur syslog <code>10.113.x.x</code></td>
+</tr>
+<tr>
+<td>Heure</td>
+<td>Timezone Paris, NTP <code>ntp.lor.numerique-educatif.fr</code></td>
+</tr>
+<tr>
+<td>SNMP</td>
+<td>Communauté <code>TICE</code>, AAA/Radius</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>RSTP, LLDP, loop-protection, multicast routing, private VLAN 999</td>
+</tr>
+<tr>
+<td>VLANs</td>
+<td>1 (Administratif), 401 (PEDAGO), 502 (DMZ-PRIV), 504 (DMZ-PEDAGO), 517 (SERVEURS-PEDA)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="lancer-un-audit">Lancer un audit</h3>
+<h4 id="selectionner-les-equipements">Sélectionner les équipements</h4>
+<p><strong>Mode Dernier scan :</strong> Case à cocher par équipement découvert
+<strong>Mode Manuel :</strong> Saisir les IPs (analyse les backups existants de ces équipements)</p>
+<blockquote>
+<p><strong>Prérequis :</strong> Un backup de la configuration doit exister pour chaque équipement audité.</p>
+</blockquote>
+<h4 id="filtrer-les-regles">Filtrer les règles</h4>
+<p>Par défaut, toutes les règles sont sélectionnées. Pour n'en appliquer que certaines :
+1. Déplier la section <strong>Règles appliquées</strong>
+2. Décocher les règles à exclure
+3. L'indicateur <code>Filtré</code> apparaît si la sélection est partielle</p>
+<h4 id="lancer-laudit">Lancer l'audit</h4>
+<p>Cliquer le bouton <strong>Auditer</strong> (vert). Les résultats apparaissent par équipement.</p>
+<h3 id="lire-les-resultats">Lire les résultats</h3>
+<p>Chaque carte équipement affiche :
+- <strong>Score</strong> : pourcentage de règles passées (vert ≥80%, orange 50-79%, rouge &lt;50%)
+- <strong>Ratio</strong> : <code>8/10 règles conformes</code>
+- <strong>Barre colorée</strong> : visualisation rapide du score</p>
+<p>En dépliant une carte, chaque règle s'affiche avec :
+- ✓ Conforme (vert) ou ✗ Non-conforme (rouge)
+- Nom de la règle
+- Badge de sévérité (critique/élevé/moyen/faible)
+- Détails du diagnostic (mots-clés trouvés ou manquants)</p>
+<h4 id="remediation">Remédiation</h4>
+<p>Pour les règles non conformes avec remediation configurée, un bloc <strong>Remediation suggérée</strong> apparaît (fond ambre) avec :
+- Le script CLI à exécuter sur l'équipement
+- Un bouton <strong>Copier</strong> pour copier les commandes dans le presse-papier</p>
+<p>Le bouton <strong>Remédiation complète</strong> (icône outils) ouvre un modal avec le script complet pour l'équipement, copier en un clic.</p>
+<h3 id="gerer-les-regles-daudit">Gérer les règles d'audit</h3>
+<blockquote>
+<p>Onglet <strong>Règles</strong> de la page Audit</p>
+</blockquote>
+<h4 id="creer-une-regle">Créer une règle</h4>
+<table>
+<thead>
+<tr>
+<th>Champ</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nom</td>
+<td>Identifiant lisible</td>
+</tr>
+<tr>
+<td>Pattern (regex)</td>
+<td>Expression régulière (supporte <code>AND</code>)</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Explication optionnelle</td>
+</tr>
+<tr>
+<td>Sévérité</td>
+<td>Critique / Élevé / Moyen / Faible</td>
+</tr>
+<tr>
+<td>Fabricant</td>
+<td>Appliquer à tous ou vendor spécifique</td>
+</tr>
+<tr>
+<td>Doit correspondre</td>
+<td>✓ = doit être présent, ✗ = doit être absent</td>
+</tr>
+<tr>
+<td>Script de remédiation</td>
+<td>Commandes CLI avec variables <code>{{hostname}}</code>, <code>{{ip}}</code>, <code>{{vendor}}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Exemple de script de remédiation :</strong></p>
+<pre><code>! Remédiation pour {{hostname}} ({{ip}})
+service password-encryption
+no ip http server
+no ip http secure-server
+</code></pre>
+<hr />
+<h2 id="10-playbooks-ssh">10. Playbooks SSH</h2>
+<blockquote>
+<p><strong>Page :</strong> Playbooks</p>
+</blockquote>
+<p>Les playbooks permettent d'automatiser des séquences de commandes SSH sur un ou plusieurs équipements, avec vérification de sortie et gestion des erreurs.</p>
+<h3 id="structure-dun-playbook-yaml">Structure d'un playbook (YAML)</h3>
+<pre><code class="language-yaml">name: Vérification sécurité
+description: Vérifie la configuration SSH et les accès
+timeout: 120s
+steps:
+  - name: Version du système
+    command: show version
+    # Pas d'expect = toujours passé
+
+  - name: Vérification SSH v2
+    command: show ip ssh
+    expect: SSH Enabled - version 2
+    on_error: continue   # continuer même si l'expect échoue
+
+  - name: Interfaces actives
+    command: show interfaces status
+    on_error: abort      # arrêter si cette commande échoue
+</code></pre>
+<h4 id="champs-disponibles">Champs disponibles</h4>
+<table>
+<thead>
+<tr>
+<th>Champ</th>
+<th>Obligatoire</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>✓</td>
+<td>Nom du playbook</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>—</td>
+<td>Description affichée dans la liste</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td>—</td>
+<td>Durée max (<code>30s</code>, <code>2m</code>, <code>1h</code>)</td>
+</tr>
+<tr>
+<td><code>steps[].name</code></td>
+<td>✓</td>
+<td>Nom de l'étape</td>
+</tr>
+<tr>
+<td><code>steps[].command</code></td>
+<td>✓</td>
+<td>Commande SSH à exécuter</td>
+</tr>
+<tr>
+<td><code>steps[].expect</code></td>
+<td>—</td>
+<td>Texte attendu dans la sortie</td>
+</tr>
+<tr>
+<td><code>steps[].on_error</code></td>
+<td>—</td>
+<td><code>continue</code> ou <code>abort</code> (défaut: <code>abort</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="creer-un-playbook">Créer un playbook</h3>
+<h4 id="mode-simple">Mode Simple</h4>
+<p>Saisir une commande par ligne — le playbook YAML est généré automatiquement.</p>
+<pre><code>show version
+show ip ssh
+show running-config
+</code></pre>
+<h4 id="mode-avance-yaml">Mode Avancé (YAML)</h4>
+<p>Éditer directement le YAML pour un contrôle total sur les étapes, les expects et la gestion des erreurs.</p>
+<h3 id="modeles-prets-a-lemploi">Modèles prêts à l'emploi</h3>
+<p>Quatre modèles sont disponibles dans l'onglet <strong>Guide &amp; Exemples</strong> :</p>
+<table>
+<thead>
+<tr>
+<th>Modèle</th>
+<th>Commandes incluses</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Inventaire rapide</td>
+<td><code>show version</code>, <code>show uptime</code>, <code>show interfaces</code></td>
+</tr>
+<tr>
+<td>Vérification sécurité</td>
+<td>SSH, Telnet, bannière, NTP, logging</td>
+</tr>
+<tr>
+<td>Backup VLAN</td>
+<td>Export de la configuration VLAN complète</td>
+</tr>
+<tr>
+<td>Diagnostics réseau</td>
+<td>ARP, routes, CDP/LLDP, compteurs d'interfaces</td>
+</tr>
+</tbody>
+</table>
+<p>Cliquer <strong>Copier</strong> sur un modèle pour coller le YAML dans l'éditeur.</p>
+<h3 id="executer-un-playbook">Exécuter un playbook</h3>
+<ol>
+<li>Cliquer <strong>▶ Exécuter</strong> sur le playbook</li>
+<li>Sélectionner les équipements cibles (avec <strong>Tout sélectionner</strong> si besoin)</li>
+<li>Cliquer <strong>Exécuter</strong></li>
+</ol>
+<h3 id="terminal-temps-reel">Terminal temps réel</h3>
+<p>Pendant l'exécution, un terminal affiche en direct :</p>
+<pre><code>── SW-SALLE-A (10.113.76.10) — équipement 1/3 ──
+
+[1/3] Version du système
+      $ show version
+
+      Aruba JL356A 2930F-24G
+      WC.16.11.0008
+
+      ✓ Version du système
+
+[2/3] Vérification SSH v2
+      $ show ip ssh
+      ...
+      ✓ Vérification SSH v2
+
+[3/3] Interfaces actives
+      $ show interfaces status
+      ...
+      ✗ Interfaces actives — timeout
+</code></pre>
+<p><strong>Code couleur :</strong>
+- Cyan : en-tête équipement
+- Blanc : commande envoyée
+- Vert clair : sortie SSH
+- Vert : step réussi (✓)
+- Rouge : step échoué (✗)</p>
+<h3 id="resume-final">Résumé final</h3>
+<p>Après l'exécution, un résumé apparaît :</p>
+<pre><code>2/3 équipements OK
+✗ 10.113.76.11 — connexion refusée
+</code></pre>
+<hr />
+<h2 id="11-planificateur-de-taches">11. Planificateur de tâches</h2>
+<blockquote>
+<p><strong>Page :</strong> Planificateur</p>
+</blockquote>
+<p>Le planificateur permet d'automatiser l'exécution de backups, scans, playbooks et commandes SSH selon un calendrier.</p>
+<h3 id="types-de-taches">Types de tâches</h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup configuration</td>
+<td>Lance un backup SSH sur des équipements</td>
+</tr>
+<tr>
+<td>Scan réseau</td>
+<td>Effectue un scan SNMP</td>
+</tr>
+<tr>
+<td>Exécuter un playbook</td>
+<td>Lance un playbook sur des équipements</td>
+</tr>
+<tr>
+<td>Commande SSH</td>
+<td>Exécute des commandes brutes</td>
+</tr>
+</tbody>
+</table>
+<h3 id="creer-une-tache-planifiee">Créer une tâche planifiée</h3>
+<h4 id="nom-et-type">Nom et type</h4>
+<p>Donner un nom explicite (<code>Backup quotidien switchs bureau A</code>) et sélectionner le type.</p>
+<h4 id="planification-mode-simple">Planification — Mode Simple</h4>
+<table>
+<thead>
+<tr>
+<th>Fréquence</th>
+<th>Options disponibles</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Une fois</td>
+<td>Date + heure</td>
+</tr>
+<tr>
+<td>Toutes les heures</td>
+<td>Minute (ex: <code>:30</code>)</td>
+</tr>
+<tr>
+<td>Quotidien</td>
+<td>Heure + Minute</td>
+</tr>
+<tr>
+<td>Hebdomadaire</td>
+<td>Jour de la semaine + Heure + Minute</td>
+</tr>
+<tr>
+<td>Mensuel</td>
+<td>Jour du mois (1-28) + Heure + Minute</td>
+</tr>
+</tbody>
+</table>
+<p>Un aperçu en français s'affiche : <code>S'exécute tous les lundis à 09h30</code></p>
+<h4 id="planification-mode-avance-cron">Planification — Mode Avancé (Cron)</h4>
+<p>Format : <code>SEC MIN HEURE JOUR_MOIS MOIS JOUR_SEMAINE</code></p>
+<pre><code>0 30 8 * * 1      Chaque lundi à 08:30:00
+0 0 2 * * *       Chaque jour à 02:00:00
+0 0 */4 * * *     Toutes les 4 heures
+0 0 8 1 * *       Le 1er de chaque mois à 08:00
+</code></pre>
+<blockquote>
+<p><strong>Note :</strong> Le premier champ est la <strong>seconde</strong> (robfig/cron v3 avec secondes).</p>
+</blockquote>
+<h4 id="parametres-mode-simple">Paramètres — Mode Simple</h4>
+<p><strong>Pour un backup :</strong>
+- Credential SSH à utiliser
+- Équipements cibles (cases à cocher depuis l'inventaire)
+- Type : running ou startup</p>
+<p><strong>Pour un scan :</strong>
+- Credential SNMP
+- Plage CIDR à scanner</p>
+<p><strong>Pour un playbook :</strong>
+- Playbook à exécuter (liste déroulante)
+- Équipements cibles</p>
+<p><strong>Pour des commandes SSH :</strong>
+- Équipements cibles
+- Liste de commandes (une par ligne)</p>
+<h4 id="parametres-mode-avance-json">Paramètres — Mode Avancé (JSON)</h4>
+<p>Pour les cas complexes, saisir le payload JSON directement :</p>
+<pre><code class="language-json">// Backup
+{
+  &quot;device_ids&quot;: [&quot;uuid-1&quot;, &quot;uuid-2&quot;],
+  &quot;config_type&quot;: &quot;running&quot;,
+  &quot;credential_id&quot;: &quot;cred-uuid&quot;
+}
+
+// Scan
+{
+  &quot;cidr&quot;: &quot;10.113.76.0/24&quot;,
+  &quot;credential_id&quot;: &quot;cred-uuid&quot;
+}
+
+// Playbook
+{
+  &quot;playbook_id&quot;: &quot;pb-uuid&quot;,
+  &quot;device_ids&quot;: [&quot;uuid-1&quot;]
+}
+</code></pre>
+<h3 id="gerer-les-taches">Gérer les tâches</h3>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Bouton</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Activer/Désactiver</td>
+<td>Toggle bleu/gris</td>
+<td>Suspend la tâche sans la supprimer</td>
+</tr>
+<tr>
+<td>Exécuter maintenant</td>
+<td>▶ (vert)</td>
+<td>Lance immédiatement hors planning</td>
+</tr>
+<tr>
+<td>Supprimer</td>
+<td>🗑️ (rouge)</td>
+<td>Supprime définitivement la tâche</td>
+</tr>
+</tbody>
+</table>
+<h3 id="suivi-des-executions">Suivi des exécutions</h3>
+<p>La colonne <strong>Dernière exécution</strong> affiche la date/heure du dernier run et son statut (succès/échec). Les détails complets sont dans les <strong>Journaux d'activité</strong>.</p>
+<blockquote>
+<p><strong>Tâche "Une fois" :</strong> Elle se désactive automatiquement après son exécution unique.</p>
+</blockquote>
+<hr />
+<h2 id="12-journaux-dactivite">12. Journaux d'activité</h2>
+<blockquote>
+<p><strong>Page :</strong> Journaux</p>
+</blockquote>
+<p>Les journaux tracent toutes les opérations effectuées par l'application.</p>
+<h3 id="onglet-evenements">Onglet Événements</h3>
+<h4 id="types-devenements-et-couleurs">Types d'événements et couleurs</h4>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Couleur</th>
+<th>Exemples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>scan</td>
+<td>Bleu</td>
+<td>Démarrage/fin d'un scan réseau</td>
+</tr>
+<tr>
+<td>backup</td>
+<td>Violet</td>
+<td>Backup réussi ou échoué</td>
+</tr>
+<tr>
+<td>audit</td>
+<td>Jaune</td>
+<td>Résultats d'audit</td>
+</tr>
+<tr>
+<td>terminal</td>
+<td>Vert</td>
+<td>Commandes SSH interactives</td>
+</tr>
+<tr>
+<td>device</td>
+<td>Cyan</td>
+<td>Ajout/suppression d'équipement</td>
+</tr>
+<tr>
+<td>playbook</td>
+<td>Orange</td>
+<td>Exécution de playbook</td>
+</tr>
+<tr>
+<td>scheduler</td>
+<td>Indigo</td>
+<td>Tâches planifiées</td>
+</tr>
+<tr>
+<td>error</td>
+<td>Rouge</td>
+<td>Erreurs diverses</td>
+</tr>
+</tbody>
+</table>
+<h4 id="filtrage">Filtrage</h4>
+<p>Le champ de recherche filtre en temps réel par type d'action. Le bouton <strong>Rafraîchir</strong> recharge la liste (auto-rafraîchissement toutes les 10 secondes).</p>
+<h4 id="detail-dun-evenement">Détail d'un événement</h4>
+<p>Cliquer sur une ligne (ou le chevron) ouvre un modal avec :
+- Grille de métadonnées (date, statut, durée, entité)
+- Détails complets au format JSON ou texte
+- <strong>Analyse contextuelle</strong> (fond jaune) : conseil de dépannage selon le type d'erreur</p>
+<p><strong>Exemples d'analyses contextuelles :</strong></p>
+<pre><code>Backup échoué
+→ &quot;Vérifier les credentials SSH et que le port 22 est accessible&quot;
+
+Scan échoué
+→ &quot;Vérifier la communauté SNMP et que le port UDP/161 est ouvert&quot;
+
+Audit échoué
+→ &quot;Lancer d'abord un backup de l'équipement avant l'audit&quot;
+</code></pre>
+<h3 id="onglet-fichiers-journaux">Onglet Fichiers journaux</h3>
+<p>Le panneau gauche liste les fichiers de logs mensuels (<code>networktools-2025-11.log</code>). Cliquer sur un fichier pour afficher son contenu brut dans le panneau droit.</p>
+<p>Les logs sont au format JSON structuré (zerolog) :</p>
+<pre><code class="language-json">{&quot;level&quot;:&quot;info&quot;,&quot;time&quot;:&quot;2025-11-14T08:30:01Z&quot;,&quot;action&quot;:&quot;backup_completed&quot;,
+ &quot;device_id&quot;:&quot;...&quot;,&quot;duration_ms&quot;:1240,&quot;status&quot;:&quot;success&quot;}
+</code></pre>
+<hr />
+<h2 id="13-topologie-reseau">13. Topologie réseau</h2>
+<blockquote>
+<p><strong>Page :</strong> Topologie</p>
+</blockquote>
+<p>La page topologie affiche un graphe interactif des équipements et de leurs interconnexions.</p>
+<h3 id="navigation-dans-le-graphe">Navigation dans le graphe</h3>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Geste</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Déplacer un nœud</td>
+<td>Glisser-déposer</td>
+</tr>
+<tr>
+<td>Zoomer</td>
+<td>Molette souris</td>
+</tr>
+<tr>
+<td>Panoramique</td>
+<td>Clic droit + glisser</td>
+</tr>
+<tr>
+<td>Minimap</td>
+<td>Coin bas-droit</td>
+</tr>
+</tbody>
+</table>
+<h3 id="code-couleur-des-nuds">Code couleur des nœuds</h3>
+<table>
+<thead>
+<tr>
+<th>Couleur</th>
+<th>Fabricant</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bleu</td>
+<td>Cisco</td>
+</tr>
+<tr>
+<td>Violet</td>
+<td>Aruba</td>
+</tr>
+<tr>
+<td>Vert</td>
+<td>Allied Telesis</td>
+</tr>
+<tr>
+<td>Gris</td>
+<td>Inconnu</td>
+</tr>
+</tbody>
+</table>
+<h3 id="icones">Icônes</h3>
+<ul>
+<li>⚡ PoE : l'équipement fournit de l'alimentation PoE (détecté depuis les OIDs)</li>
+</ul>
+<h3 id="actualiser">Actualiser</h3>
+<p>Le bouton <strong>Rafraîchir</strong> reconstruit le graphe depuis l'inventaire et les données LLDP collectées lors du dernier scan.</p>
+<hr />
+<h2 id="14-parametres">14. Paramètres</h2>
+<blockquote>
+<p><strong>Page :</strong> Paramètres</p>
+</blockquote>
+<h3 id="parametres-generaux">Paramètres généraux</h3>
+<table>
+<thead>
+<tr>
+<th>Paramètre</th>
+<th>Description</th>
+<th>Défaut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Thème</td>
+<td>Sombre / Clair</td>
+<td>Sombre</td>
+</tr>
+<tr>
+<td>Langue</td>
+<td>Français / English</td>
+<td>Français</td>
+</tr>
+<tr>
+<td>Workers max</td>
+<td>Parallélisme des opérations</td>
+<td>10</td>
+</tr>
+<tr>
+<td>Rétention logs (jours)</td>
+<td>Durée de conservation des logs</td>
+<td>90</td>
+</tr>
+<tr>
+<td>Répertoire backup</td>
+<td>Dossier de stockage des configs</td>
+<td><code>%APPDATA%\NetworkTools\backups</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="repertoire-de-backup">Répertoire de backup</h3>
+<p>Cliquer le bouton de sélection pour choisir un dossier personnalisé. Recommandé : un répertoire synchronisé (NAS, SharePoint...) pour garder les backups hors machine.</p>
+<div class="callout callout-tip">
+<p><strong>Conseil :</strong> Mettre le répertoire de backup sur un partage réseau ou un dossier synchronisé pour assurer la sauvegarde des configurations même en cas de panne du poste.</p>
+</div>
+<hr />
+<h2 id="15-workflows-types">15. Workflows types</h2>
+<p>Cette section décrit des séquences d'opérations complètes pour les cas d'usage courants.</p>
+<h3 id="workflow-1-audit-hebdomadaire-automatise">Workflow 1 : Audit hebdomadaire automatisé</h3>
+<p><strong>Objectif :</strong> Auditer tous les switchs chaque semaine et recevoir un rapport.</p>
+<pre><code>1. Paramètres
+   → Créer credential &quot;admin-rge&quot; (SSH + SNMP communauté TICE)
+
+2. Scan réseau
+   → Mode Switches, préfixe 10.113.76
+   → Communauté TICE, timeout 3s, 10 workers
+   → Vérifier les équipements découverts
+
+3. Inventaire
+   → Assigner le credential &quot;admin-rge&quot; à tous les équipements
+   → Compléter les localisations
+
+4. Planificateur → Nouvelle tâche
+   → Nom : &quot;Backup hebdomadaire&quot;
+   → Type : Backup configuration
+   → Fréquence : Hebdomadaire, Lundi 06:00
+   → Équipements : Tous
+   → Config type : Running
+
+5. Planificateur → Nouvelle tâche
+   → Nom : &quot;Audit hebdomadaire&quot;
+   → Type : Exécuter playbook
+   → Fréquence : Hebdomadaire, Lundi 07:00 (après le backup)
+   → Playbook : Vérification sécurité
+
+6. Logs
+   → Surveiller l'onglet Événements chaque lundi matin
+</code></pre>
+<h3 id="workflow-2-deploiement-dun-changement-de-configuration">Workflow 2 : Déploiement d'un changement de configuration</h3>
+<p><strong>Objectif :</strong> Activer NTP sur un groupe de switchs et vérifier le résultat.</p>
+<pre><code>1. Playbooks → Créer &quot;Configuration NTP&quot;
+   Contenu YAML :
+   ---
+   name: Configuration NTP
+   timeout: 60s
+   steps:
+     - name: Configurer NTP
+       command: ntp server 10.113.10.1
+     - name: Vérifier NTP
+       command: show ntp status
+       expect: Clock is synchronized
+
+2. Playbooks → Exécuter sur les équipements cibles
+   → Observer le terminal en temps réel
+   → Vérifier que &quot;✓ Vérifier NTP&quot; s'affiche en vert
+
+3. Audit → Lancer avec règle &quot;NTP configuré&quot;
+   → Vérifier score 100%
+
+4. Backup → Sauvegarder les nouvelles configs
+</code></pre>
+<h3 id="workflow-3-comparaison-avantapres-maintenance">Workflow 3 : Comparaison avant/après maintenance</h3>
+<p><strong>Objectif :</strong> Documenter les changements effectués pendant une fenêtre de maintenance.</p>
+<pre><code>1. Avant la maintenance
+   Backups → Sauvegarder les configs (snapshot avant)
+
+2. Effectuer la maintenance sur les équipements
+
+3. Après la maintenance
+   Backups → Sauvegarder à nouveau
+
+4. Diff → Mode Backup
+   → Sélectionner équipement
+   → Backup A = avant maintenance
+   → Backup B = après maintenance
+   → Options : &quot;Changements seulement&quot;
+   → Exporter HTML pour la documentation
+
+5. Audit → Vérifier la conformité post-maintenance
+</code></pre>
+<h3 id="workflow-4-inventaire-initial-dun-nouveau-site">Workflow 4 : Inventaire initial d'un nouveau site</h3>
+<p><strong>Objectif :</strong> Découvrir et documenter tous les équipements d'un nouveau bâtiment.</p>
+<pre><code>1. Paramètres → Créer credential SNMP pour le nouveau site
+
+2. Scan réseau → Mode CIDR, plage du nouveau site
+   → Récupérer la liste des équipements
+
+3. Inventaire → Compléter les informations manquantes
+   → Localisation par salle
+   → Modèle si manquant
+   → Credential SSH
+
+4. Scan → Exporter Excel pour documentation
+   → Feuille de résumé par fabricant incluse
+
+5. Backups → Premier backup complet de tous les équipements
+
+6. Audit → Premier audit de conformité
+   → Identifier les écarts par rapport aux standards
+</code></pre>
+<hr />
+<h2 id="16-reference-technique">16. Référence technique</h2>
+<h3 id="formats-de-fichiers-backup">Formats de fichiers backup</h3>
+<p>Les fichiers de backup sont sauvegardés avec la convention de nommage :</p>
+<pre><code>{IP}_{CONFIG_TYPE}_{TIMESTAMP}.txt
+Exemple : 10.113.76.10_running_20251114_083045.txt
+</code></pre>
+<p>Ils contiennent la configuration brute telle que renvoyée par l'équipement, sans artefacts de session.</p>
+<h3 id="format-yaml-des-playbooks">Format YAML des playbooks</h3>
+<pre><code class="language-yaml">name: string                    # Obligatoire
+description: string             # Optionnel
+timeout: &quot;60s&quot;                  # Optionnel (défaut: 60s)
+steps:
+  - name: string                # Obligatoire
+    command: string             # Obligatoire
+    expect: string              # Optionnel — sous-chaîne attendue dans la sortie
+    on_error: continue|abort    # Optionnel (défaut: abort)
+</code></pre>
+<h3 id="expressions-cron-planificateur">Expressions cron (Planificateur)</h3>
+<p>Format robfig/cron v3 avec secondes :</p>
+<pre><code>┌─────────── seconde (0-59)
+│ ┌───────── minute (0-59)
+│ │ ┌─────── heure (0-23)
+│ │ │ ┌───── jour du mois (1-31)
+│ │ │ │ ┌─── mois (1-12)
+│ │ │ │ │ ┌─ jour de la semaine (0-6, 0=dimanche)
+│ │ │ │ │ │
+0 0 8 * * 1   → Chaque lundi à 08:00:00
+</code></pre>
+<p><strong>Wildcards et opérateurs :</strong></p>
+<table>
+<thead>
+<tr>
+<th>Opérateur</th>
+<th>Signification</th>
+<th>Exemple</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>*</code></td>
+<td>Toutes valeurs</td>
+<td><code>* * * * * *</code> = chaque seconde</td>
+</tr>
+<tr>
+<td><code>*/n</code></td>
+<td>Tous les n</td>
+<td><code>0 */15 * * * *</code> = toutes les 15 min</td>
+</tr>
+<tr>
+<td><code>n,m</code></td>
+<td>Valeurs multiples</td>
+<td><code>0 0 8,20 * * *</code> = 8h et 20h</td>
+</tr>
+<tr>
+<td><code>n-m</code></td>
+<td>Plage</td>
+<td><code>0 0 8-18 * * 1-5</code> = heures ouvrées</td>
+</tr>
+</tbody>
+</table>
+<h3 id="variables-de-remediation-audit">Variables de remédiation (Audit)</h3>
+<p>Dans les scripts de remédiation des règles d'audit :</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Valeur</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{{hostname}}</code></td>
+<td>Hostname de l'équipement</td>
+</tr>
+<tr>
+<td><code>{{ip}}</code></td>
+<td>Adresse IP</td>
+</tr>
+<tr>
+<td><code>{{vendor}}</code></td>
+<td>Fabricant détecté</td>
+</tr>
+</tbody>
+</table>
+<h3 id="evenements-temps-reel-architecture">Événements temps réel (architecture)</h3>
+<p>Pour les développeurs étendant l'application, les événements Wails émis :</p>
+<table>
+<thead>
+<tr>
+<th>Événement</th>
+<th>Payload</th>
+<th>Émis par</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>scan:progress</code></td>
+<td><code>{ip, done, total, percent}</code></td>
+<td>Scanner SNMP</td>
+</tr>
+<tr>
+<td><code>scan:complete</code></td>
+<td><code>{total, duration_ms}</code></td>
+<td>Scanner SNMP</td>
+</tr>
+<tr>
+<td><code>backup:progress</code></td>
+<td><code>{device_id, status, error}</code></td>
+<td>Gestionnaire backup</td>
+</tr>
+<tr>
+<td><code>backup:complete</code></td>
+<td><code>{success, failed, duration_ms}</code></td>
+<td>Gestionnaire backup</td>
+</tr>
+<tr>
+<td><code>terminal:output</code></td>
+<td><code>{line, error}</code></td>
+<td>Terminal SSH</td>
+</tr>
+<tr>
+<td><code>playbook:step</code></td>
+<td><code>{device_id, device_ip, device_label, step_index, total_steps, step_name, command, done, output, passed, error}</code></td>
+<td>Runner playbook</td>
+</tr>
+<tr>
+<td><code>playbook:progress</code></td>
+<td><code>{device_label, device_ip, status}</code></td>
+<td>App.go</td>
+</tr>
+<tr>
+<td><code>tasks:stopped</code></td>
+<td>—</td>
+<td>StopAllTasks()</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="17-depannage">17. Dépannage</h2>
+<h3 id="problemes-de-connexion-ssh">Problèmes de connexion SSH</h3>
+<p><strong>Symptôme :</strong> Backup échoué — <code>connection refused</code></p>
+<pre><code>→ Vérifier que le service SSH est actif sur l'équipement
+→ Vérifier le port SSH (défaut: 22)
+→ Tester avec le bouton &quot;Test connexion&quot; dans l'inventaire
+</code></pre>
+<p><strong>Symptôme :</strong> Backup échoué — <code>authentication failed</code></p>
+<pre><code>→ Vérifier le nom d'utilisateur et le mot de passe dans le credential
+→ Tester manuellement : ssh user@ip depuis un terminal
+→ Vérifier que l'utilisateur a les droits enable/admin
+</code></pre>
+<p><strong>Symptôme :</strong> Backup réussi mais configuration incomplète</p>
+<pre><code>→ Vérifier que le vendor est correctement défini dans l'inventaire
+→ Le terminal SSH interactif permet de tester manuellement la commande
+→ Vérifier que la pagination est bien désactivée (pas de &quot;--- More ---&quot; dans le backup)
+</code></pre>
+<h3 id="problemes-snmp">Problèmes SNMP</h3>
+<p><strong>Symptôme :</strong> Scan ne trouve aucun équipement</p>
+<pre><code>→ Vérifier la communauté SNMP (défaut: TICE)
+→ Vérifier que le port UDP/161 est accessible (firewall/ACL)
+→ Tester avec &quot;Diagnostic IP individuel&quot; sur une IP connue
+→ Augmenter le timeout (3s → 5s sur liaison WAN)
+</code></pre>
+<p><strong>Symptôme :</strong> Équipement découvert sans hostname</p>
+<pre><code>→ L'OID sysName n'est pas configuré sur l'équipement
+→ Configurer manuellement le hostname dans l'inventaire
+</code></pre>
+<h3 id="problemes-daudit">Problèmes d'audit</h3>
+<p><strong>Symptôme :</strong> Audit échoue avec "aucun backup disponible"</p>
+<pre><code>→ Effectuer d'abord un backup de l'équipement
+→ L'audit analyse le dernier backup disponible, pas la config live
+</code></pre>
+<p><strong>Symptôme :</strong> Score d'audit anormalement bas</p>
+<pre><code>→ Vérifier que les règles correspondent au vendor de l'équipement
+→ Filtrer les règles par vendor dans les paramètres de la règle
+→ Visualiser le backup pour vérifier manuellement les patterns
+</code></pre>
+<h3 id="problemes-de-performance">Problèmes de performance</h3>
+<p><strong>Symptôme :</strong> Scan très lent</p>
+<pre><code>→ Réduire le timeout par IP (1s si réseau LAN rapide)
+→ Augmenter les workers (20-50 sur LAN stable)
+→ Utiliser le mode Switches plutôt que Complet
+</code></pre>
+<p><strong>Symptôme :</strong> Backup de nombreux équipements timeout</p>
+<pre><code>→ Le backup est séquentiel par défaut
+→ Augmenter le timeout SSH dans les paramètres
+→ Découper en plusieurs batches
+</code></pre>
+<h3 id="base-de-donnees">Base de données</h3>
+<p><strong>Symptôme :</strong> Erreur "database is locked"</p>
+<pre><code>→ Une autre instance de NetworkTools est peut-être ouverte
+→ Fermer toutes les instances et relancer
+</code></pre>
+<p><strong>Fichier de base de données :</strong></p>
+<pre><code>%APPDATA%\NetworkTools\networktools.db
+</code></pre>
+<p>Ce fichier SQLite peut être ouvert avec DB Browser for SQLite pour inspection directe.</p>
+<h3 id="logs-de-diagnostic">Logs de diagnostic</h3>
+<p>Les logs détaillés sont dans <code>%APPDATA%\NetworkTools\logs\networktools-YYYY-MM.log</code>.</p>
+<p>Format JSON structuré, consultable directement dans l'application (Journaux → Fichiers journaux) ou avec un éditeur texte.</p>
+<hr />
+<p><em>NetworkTools — Région Grand Est — Administration réseau</em>
+<em>Stack : Wails v2 · Go · React · SQLite · zerolog</em></p>
+</div>
+
+</body>
+</html>
