@@ -178,91 +178,101 @@ export default function BackupPage() {
   return (
     <div className="flex flex-col h-full">
       <PageHeader title="Gestionnaire de backups" description="Sauvegarder les configurations réseau" />
-      <div className="flex-1 overflow-auto p-6 space-y-4">
+      <div className="flex-1 overflow-auto p-6 space-y-6">
 
         {/* Backup launcher */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-300">Lancer un backup</h2>
-            <div className="flex gap-1 bg-slate-800 rounded-lg p-0.5">
+        <div className="bg-slate-900/40 backdrop-blur-md border border-white/[0.05] rounded-2xl p-6 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+          <div className="flex items-center justify-between mb-6 relative z-10">
+            <h2 className="text-sm font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+              Lancer un backup
+            </h2>
+            <div className="flex bg-slate-950/50 rounded-xl p-1 border border-white/[0.02]">
               {(['manual', 'last_scan'] as DeviceSource[]).map(mode => (
                 <button key={mode} onClick={() => setDeviceSource(mode)}
-                  className={`px-3 py-1 rounded-md text-xs transition-colors ${deviceSource === mode ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}>
+                  className={`flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${deviceSource === mode ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'text-slate-400 hover:text-slate-200'}`}>
                   {mode === 'manual' ? 'Saisie manuelle' : 'Dernier scan'}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
-            <Select label="Type de config" value={configType} options={configTypeOptions}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-end relative z-10 mb-4">
+            <Select label="Type de configuration" value={configType} options={configTypeOptions}
               onChange={e => setConfigType(e.target.value)} />
-            <div className="flex-1" />
+            
             {globalCredId ? (
-              <p className="text-xs text-green-400 self-end pb-1">Credential actif depuis le menu de gauche</p>
+              <div className="md:col-span-2 flex items-center">
+                <p className="text-[11px] font-bold tracking-wider text-emerald-400 uppercase bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">
+                  ✓ Credential global actif
+                </p>
+              </div>
             ) : (
               <>
-                <Input label="Utilisateur SSH" value={inlineUsername}
+                <Input label="Utilisateur SSH (fallback)" value={inlineUsername}
                   onChange={e => setInlineUsername(e.target.value)}
-                  placeholder="admin" className="w-36" />
+                  placeholder="admin" />
                 <Input label="Mot de passe SSH" type="password" value={inlinePassword}
                   onChange={e => setInlinePassword(e.target.value)}
-                  placeholder="••••••" className="w-36" />
+                  placeholder="••••••••" />
               </>
             )}
           </div>
 
           {/* Manual IP input */}
           {deviceSource === 'manual' && (
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-slate-400 block">
-                Liste d'IPs (une par ligne ou séparées par virgule)
+            <div className="space-y-2 relative z-10 w-full mb-4">
+              <label className="text-xs font-semibold text-slate-300 tracking-wide block">
+                Liste d'IPs cibles (une par ligne ou séparées par virgule)
               </label>
               <textarea value={manualIpText} onChange={e => setManualIpText(e.target.value)}
                 placeholder={"10.113.76.1\n10.113.76.2\n10.113.76.3"}
-                className="w-full bg-slate-800 border border-slate-700 rounded-md p-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500 resize-none"
+                className="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl p-4 text-xs font-mono text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-slate-600 transition-all duration-200 resize-none shadow-inner"
                 rows={4} />
             </div>
           )}
 
           {/* Last scan device list */}
           {deviceSource === 'last_scan' && (
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs font-medium text-slate-400">
-                  Équipements ({selectedDevices.length}/{devices.length} sélectionnés)
+            <div className="relative z-10 mb-4 pb-2 border-b border-white/[0.04]">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold text-slate-300 tracking-wide">
+                  Sélection des équipements ({selectedDevices.length}/{devices.length})
                 </p>
                 <button onClick={() => setSelectedDevices(selectedDevices.length === devices.length ? [] : devices.map((d: any) => d.id))}
-                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
-                  {selectedDevices.length === devices.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+                  className="text-xs text-blue-400 font-medium hover:text-blue-300 transition-colors uppercase tracking-wider">
+                  {selectedDevices.length === devices.length ? 'Désélectionner Tout' : 'Sélectionner Tout'}
                 </button>
               </div>
-              <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+              <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto custom-scrollbar p-1">
                 {devices.map((d: any) => {
                   const prog = backupProgress[d.id]
                   return (
                     <button key={d.id} onClick={() => toggleDevice(d.id)}
-                      className={`relative px-2 py-1 rounded text-xs border transition-colors ${selectedDevices.includes(d.id)
-                        ? 'bg-blue-600/20 border-blue-600 text-blue-400'
-                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'}`}>
+                      className={`relative px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 shadow-sm ${selectedDevices.includes(d.id)
+                        ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                        : 'bg-slate-900 border-slate-700/60 text-slate-400 hover:bg-slate-800'}`}>
                       {d.hostname || d.ip}
-                      {prog?.status === 'running' && <RefreshCw className="inline w-3 h-3 ml-1 animate-spin" />}
-                      {prog?.status === 'success' && <span className="ml-1 text-green-400">✓</span>}
-                      {prog?.status === 'failed' && <span className="ml-1 text-red-400">✗</span>}
+                      {prog?.status === 'running' && <RefreshCw className="inline w-3 h-3 ml-1.5 animate-spin" />}
+                      {prog?.status === 'success' && <span className="ml-1.5 text-emerald-400 font-bold">✓</span>}
+                      {prog?.status === 'failed' && <span className="ml-1.5 text-red-400 font-bold">✗</span>}
                     </button>
                   )
                 })}
                 {devices.length === 0 && (
-                  <p className="text-xs text-amber-400">Aucun scan récent. Lancez d'abord une découverte réseau.</p>
+                  <p className="text-xs font-medium text-amber-500 bg-amber-500/10 px-3 py-2 rounded-lg border border-amber-500/20">Aucun scan récent. Lancez d'abord une découverte réseau sur la page Scan.</p>
                 )}
               </div>
             </div>
           )}
 
-          <Button variant="primary" loading={backupMutation.isPending}
-            disabled={!canLaunch} onClick={() => backupMutation.mutate()}>
-            <Play className="w-4 h-4" /> Lancer le backup
-          </Button>
+          <div className="relative z-10 flex pt-2">
+            <Button variant="primary" loading={backupMutation.isPending} className="shadow-blue-500/25 px-8"
+              disabled={!canLaunch} onClick={() => backupMutation.mutate()}>
+              <Play className="w-4 h-4" /> Démarrer les Backups
+            </Button>
+          </div>
 
           {/* Global progress bar */}
           {backupMutation.isPending && Object.keys(backupProgress).length > 0 && (() => {
@@ -317,63 +327,76 @@ export default function BackupPage() {
         </div>
 
         {/* Historique */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-slate-800 flex justify-between items-center">
-            <h2 className="text-sm font-semibold text-slate-300">Historique & Terminal</h2>
-            <Select value={selectedDevice} className="w-52 py-1"
+        <div className="bg-slate-900/40 backdrop-blur-md border border-white/[0.05] rounded-2xl shadow-xl overflow-hidden flex flex-col">
+          <div className="px-6 py-4 border-b border-white/[0.04] bg-slate-950/40 flex justify-between items-center sticky top-0">
+            <h2 className="text-sm font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Historique des sauvegardes
+            </h2>
+            <Select value={selectedDevice} className="w-64"
               options={[{ value: '', label: 'Sélectionner un équipement...' }, ...(knownDevices as any[]).map((d: any) => ({ value: d.id, label: `${d.hostname || d.ip} (${d.ip})` }))]}
               onChange={e => setSelectedDevice(e.target.value)} />
           </div>
           {selectedDevice ? (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-slate-400 border-b border-slate-800">
-                  <th className="text-left p-3">Date</th>
-                  <th className="text-left p-3">Type</th>
-                  <th className="text-left p-3">Statut</th>
-                  <th className="text-left p-3">Taille</th>
-                  <th className="text-left p-3">Durée</th>
-                  <th className="text-left p-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(backups as any[]).map((b: any) => (
-                  <tr key={b.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
-                    <td className="p-3 text-slate-300 text-xs">{formatDate(b.created_at)}</td>
-                    <td className="p-3 text-slate-400">{b.config_type}</td>
-                    <td className="p-3">
-                      <StatusBadge status={b.status} />
-                      {b.error_message && <p className="text-xs text-red-400 mt-0.5">{b.error_message}</p>}
-                    </td>
-                    <td className="p-3 text-slate-400">{formatBytes(b.file_size_bytes)}</td>
-                    <td className="p-3 text-slate-400">{b.duration_ms}ms</td>
-                    <td className="p-3 flex gap-1">
-                      {b.status === 'success' && (
-                        <Button size="sm" variant="ghost" onClick={() => handleViewBackup(b.id)}>
-                          <Eye className="w-3.5 h-3.5" />
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-950/50 text-slate-400 border-b border-white/[0.04] text-[11px] uppercase tracking-wider sticky top-0 z-10">
+                    <th className="text-left py-3 px-5 font-bold">Date & Heure</th>
+                    <th className="text-left py-3 px-5 font-bold">Type</th>
+                    <th className="text-left py-3 px-5 font-bold">Statut</th>
+                    <th className="text-left py-3 px-5 font-bold">Taille</th>
+                    <th className="text-left py-3 px-5 font-bold">Durée</th>
+                    <th className="text-right py-3 px-5 font-bold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.02]">
+                  {(backups as any[]).map((b: any) => (
+                    <tr key={b.id} className="hover:bg-white/[0.02] transition-colors group">
+                      <td className="py-3 px-5 text-slate-300 font-medium tracking-wide">{formatDate(b.created_at)}</td>
+                      <td className="py-3 px-5 text-slate-400 font-mono text-xs">{b.config_type}</td>
+                      <td className="py-3 px-5">
+                        <StatusBadge status={b.status} />
+                        {b.error_message && <p className="text-[10px] text-red-400 mt-1 max-w-[200px] truncate" title={b.error_message}>{b.error_message}</p>}
+                      </td>
+                      <td className="py-3 px-5 text-slate-400 font-mono text-xs">{formatBytes(b.file_size_bytes)}</td>
+                      <td className="py-3 px-5 text-slate-400 font-mono text-xs">{b.duration_ms}ms</td>
+                      <td className="py-3 px-5 flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {b.status === 'success' && (
+                          <Button size="icon" variant="ghost" onClick={() => handleViewBackup(b.id)} className="w-8 h-8 rounded bg-white/[0.02]">
+                            <Eye className="w-4 h-4 text-emerald-400" />
+                          </Button>
+                        )}
+                        <Button size="icon" variant="ghost" onClick={() => handleOpenTerminal(selectedDevice)}
+                          title="Ouvrir Terminal SSH" className="w-8 h-8 rounded bg-white/[0.02]">
+                          <Terminal className="w-4 h-4 text-blue-400" />
                         </Button>
-                      )}
-                      <Button size="sm" variant="ghost" onClick={() => handleOpenTerminal(selectedDevice)}
-                        title="Terminal SSH">
-                        <Terminal className="w-3.5 h-3.5 text-green-400" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-                {(backups as any[]).length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="text-center py-8 text-slate-500">
-                      <Clock className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                      Aucun backup pour cet équipement
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                      </td>
+                    </tr>
+                  ))}
+                  {(backups as any[]).length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center py-16">
+                        <div className="flex flex-col items-center justify-center text-slate-500">
+                          <div className="w-12 h-12 rounded-full bg-slate-800/50 flex items-center justify-center mb-3">
+                            <Clock className="w-6 h-6 text-slate-400" />
+                          </div>
+                          <span className="font-medium text-slate-300">Aucun backup enregistré</span>
+                          <span className="text-xs mt-1">Les sauvegardes pour cet équipement apparaîtront ici.</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           ) : (
-            <div className="text-center py-12 text-slate-500">
-              <Terminal className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              Sélectionnez un équipement pour voir l'historique
+            <div className="text-center py-16 text-slate-500 flex flex-col items-center justify-center h-48">
+              <div className="w-16 h-16 rounded-full bg-slate-800/30 flex items-center justify-center mb-4 border border-slate-700/50">
+                <Terminal className="w-8 h-8 text-slate-600" />
+              </div>
+              <span className="font-semibold text-slate-300">Sélectionnez un équipement</span>
+              <span className="text-sm mt-1">Utilisez le menu déroulant ci-dessus pour consulter l'historique de ses configurations.</span>
             </div>
           )}
         </div>

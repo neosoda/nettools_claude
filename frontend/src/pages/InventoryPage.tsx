@@ -121,53 +121,63 @@ export default function InventoryPage() {
         }
       />
 
-      <div className="flex-1 overflow-auto p-4">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-32 text-slate-500">
-            <RefreshCw className="w-5 h-5 animate-spin mr-2" /> Chargement...
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-slate-400 border-b border-slate-800">
-                <th className="text-left pb-2 pl-2 font-medium">IP</th>
-                <th className="text-left pb-2 font-medium">Hostname</th>
-                <th className="text-left pb-2 font-medium">Vendor</th>
-                <th className="text-left pb-2 font-medium">Modèle</th>
-                <th className="text-left pb-2 font-medium">Location</th>
-                <th className="text-left pb-2 font-medium">Vu le</th>
-                <th className="text-left pb-2 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+      <div className="flex-1 overflow-auto p-6">
+        <div className="bg-slate-900/40 backdrop-blur-md border border-white/[0.05] rounded-2xl shadow-xl overflow-hidden flex flex-col h-full max-h-[800px]">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center h-48 text-slate-500 gap-3">
+              <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
+              <span className="text-sm font-medium animate-pulse">Chargement de l'inventaire...</span>
+            </div>
+          ) : (
+            <div className="overflow-x-auto flex-1 custom-scrollbar">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-950/50 text-slate-400 border-b border-white/[0.04] text-[11px] uppercase tracking-wider sticky top-0 z-10">
+                    <th className="text-left py-3 px-5 font-bold">Adresse IP</th>
+                    <th className="text-left py-3 px-5 font-bold">Hostname</th>
+                    <th className="text-left py-3 px-5 font-bold">Système/Modèle</th>
+                    <th className="text-left py-3 px-5 font-bold">Localisation</th>
+                    <th className="text-left py-3 px-5 font-bold">Dernière Vue</th>
+                    <th className="text-right py-3 px-5 font-bold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.02]">
               {filtered.map(device => (
-                <tr key={device.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
-                  <td className="py-2.5 pl-2 font-mono text-blue-400">{device.ip}</td>
-                  <td className="py-2.5 text-slate-200">{device.hostname || '—'}</td>
-                  <td className="py-2.5">
-                    <span className="text-xs bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-slate-300">
-                      {device.vendor || 'unknown'}
+                <tr key={device.id} className="hover:bg-white/[0.02] transition-colors group">
+                  <td className="py-3 px-5">
+                    <span className="font-mono text-blue-400 font-medium bg-blue-500/5 px-2 py-1 rounded-md border border-blue-500/10 group-hover:border-blue-500/30 transition-colors">
+                      {device.ip}
                     </span>
                   </td>
-                  <td className="py-2.5 text-slate-400">{device.model || '—'}</td>
-                  <td className="py-2.5 text-slate-400">{device.location || '—'}</td>
-                  <td className="py-2.5 text-slate-500 text-xs">{formatDate(device.last_seen_at)}</td>
-                  <td className="py-2.5">
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => { setEditDevice(device); setShowModal(true) }}>
-                        <Edit className="w-3.5 h-3.5" />
+                  <td className="py-3 px-5 font-medium text-slate-200">
+                    {device.hostname || <span className="text-slate-600 italic">Non défini</span>}
+                  </td>
+                  <td className="py-3 px-5">
+                    <div className="flex flex-col gap-1 items-start">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700/50">
+                        {device.vendor || 'Unknown'}
+                      </span>
+                      <span className="text-xs text-slate-300">{device.model || 'N/A'}</span>
+                    </div>
+                  </td>
+                  <td className="py-3 px-5 text-slate-400 text-sm">{device.location || '—'}</td>
+                  <td className="py-3 px-5 text-slate-500 text-xs font-medium">{formatDate(device.last_seen_at)}</td>
+                  <td className="py-3 px-5">
+                    <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button size="icon" variant="ghost" onClick={() => { setEditDevice(device); setShowModal(true) }} className="w-8 h-8 rounded bg-white/[0.02]">
+                        <Edit className="w-4 h-4 text-blue-400" />
                       </Button>
-                      <Button size="sm" variant="ghost" loading={testing === device.id} onClick={() => handleTest(device.id)}>
-                        <Plug className="w-3.5 h-3.5" />
+                      <Button size="icon" variant="ghost" loading={testing === device.id} onClick={() => handleTest(device.id)} className="w-8 h-8 rounded bg-white/[0.02]">
+                        <Plug className="w-4 h-4 text-emerald-400" />
                       </Button>
                       {confirmDeleteId === device.id ? (
-                        <div className="flex items-center gap-1">
-                          <Button size="sm" variant="danger" onClick={() => { deleteMutation.mutate(device.id); setConfirmDeleteId(null) }}>Oui</Button>
-                          <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteId(null)}>Non</Button>
+                        <div className="flex items-center bg-red-500/10 rounded border border-red-500/20 px-1">
+                          <Button size="sm" variant="ghost" onClick={() => { deleteMutation.mutate(device.id); setConfirmDeleteId(null) }} className="text-red-400 hover:text-red-300 p-1 text-xs font-bold">OK</Button>
+                          <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteId(null)} className="text-slate-400 hover:text-slate-300 p-1 text-xs">X</Button>
                         </div>
                       ) : (
-                        <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteId(device.id)}>
-                          <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                        <Button size="icon" variant="ghost" onClick={() => setConfirmDeleteId(device.id)} className="w-8 h-8 rounded bg-white/[0.02]">
+                          <Trash2 className="w-4 h-4 text-red-400" />
                         </Button>
                       )}
                     </div>
@@ -176,42 +186,49 @@ export default function InventoryPage() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-slate-500">
-                    Aucun équipement. Ajoutez-en un ou lancez une découverte.
+                  <td colSpan={6} className="text-center py-16">
+                    <div className="flex flex-col items-center gap-2">
+                       <span className="text-slate-500 font-medium">Aucun équipement correspondant.</span>
+                       <span className="text-slate-600 text-sm">Ajoutez-en un ou lancez une découverte réseau.</span>
+                    </div>
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+          </div>
         )}
+        </div>
       </div>
 
       <Modal open={showModal} onClose={() => { setShowModal(false); setEditDevice(null) }}
         title={editDevice?.id ? 'Modifier équipement' : 'Ajouter équipement'}>
-        <form onSubmit={e => { e.preventDefault(); saveMutation.mutate(editDevice!) }} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Adresse IP *" value={editDevice?.ip || ''} required
+        <form onSubmit={e => { e.preventDefault(); saveMutation.mutate(editDevice!) }} className="space-y-5">
+          <div className="grid grid-cols-2 gap-5">
+            <Input label="Adresse IP" value={editDevice?.ip || ''} required
               onChange={e => setEditDevice(d => ({ ...d, ip: e.target.value }))} />
             <Input label="Hostname" value={editDevice?.hostname || ''}
               onChange={e => setEditDevice(d => ({ ...d, hostname: e.target.value }))} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Select label="Vendor" value={editDevice?.vendor || 'unknown'} options={vendorOptions}
+          <div className="grid grid-cols-2 gap-5 border-t border-white/[0.04] pt-4">
+            <Select label="Constructeur (Vendor)" value={editDevice?.vendor || 'unknown'} options={vendorOptions}
               onChange={e => setEditDevice(d => ({ ...d, vendor: e.target.value }))} />
-            <Input label="Modèle" value={editDevice?.model || ''}
+            <Input label="Modèle exact" value={editDevice?.model || ''}
               onChange={e => setEditDevice(d => ({ ...d, model: e.target.value }))} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-5">
             <Input label="Port SSH" type="number" value={editDevice?.ssh_port || 22}
               onChange={e => setEditDevice(d => ({ ...d, ssh_port: parseInt(e.target.value) }))} />
-            <Input label="Location" value={editDevice?.location || ''}
+            <Input label="Emplacement (Location)" value={editDevice?.location || ''}
               onChange={e => setEditDevice(d => ({ ...d, location: e.target.value }))} />
           </div>
-          <Select label="Credentials SSH/SNMP" value={editDevice?.credential_id || ''} options={credOptions}
-            onChange={e => setEditDevice(d => ({ ...d, credential_id: e.target.value }))} />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" onClick={() => setShowModal(false)}>Annuler</Button>
-            <Button type="submit" variant="primary" loading={saveMutation.isPending}>Sauvegarder</Button>
+          <div className="bg-slate-950/30 p-4 rounded-xl border border-white/[0.02]">
+            <Select label="Credentials SSH/SNMP Liés" value={editDevice?.credential_id || ''} options={credOptions}
+              onChange={e => setEditDevice(d => ({ ...d, credential_id: e.target.value }))} />
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-white/[0.04]">
+            <Button type="button" variant="ghost" onClick={() => setShowModal(false)}>Annuler</Button>
+            <Button type="submit" variant="primary" loading={saveMutation.isPending} className="px-6">Sauvegarder</Button>
           </div>
         </form>
       </Modal>

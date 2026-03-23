@@ -54,21 +54,26 @@ function SidebarCredentialSelector() {
   if ((credentials as any[]).length === 0) return null
 
   return (
-    <div className="px-3 py-2 border-b border-slate-800">
-      <div className="flex items-center gap-1.5 mb-1">
-        <KeyRound className="w-3 h-3 text-slate-500" />
-        <span className="text-xs text-slate-500">Credential actif</span>
+    <div className="px-4 py-3 mx-2 mt-2 bg-slate-800/40 rounded-xl border border-white/[0.05] flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <KeyRound className="w-3.5 h-3.5 text-blue-400" />
+        <span className="text-xs font-medium text-slate-300 uppercase tracking-wider">Credential Actif</span>
       </div>
-      <select
-        value={globalCredId}
-        onChange={e => setGlobalCredId(e.target.value)}
-        className="w-full bg-slate-800 border border-slate-700 rounded text-xs text-slate-200 px-2 py-1 focus:outline-none focus:border-blue-500"
-      >
-        <option value="">— Aucun —</option>
-        {(credentials as any[]).map((c: any) => (
-          <option key={c.id} value={c.id}>{c.name}</option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+          value={globalCredId}
+          onChange={e => setGlobalCredId(e.target.value)}
+          className="w-full appearance-none bg-slate-900/80 border border-slate-700/60 rounded-lg text-xs font-medium text-slate-200 px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500/50 hover:bg-slate-800 transition-colors"
+        >
+          <option value="">— Aucun —</option>
+          {(credentials as any[]).map((c: any) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+          <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+        </div>
+      </div>
     </div>
   )
 }
@@ -101,61 +106,90 @@ function AppContent() {
   }, [])
 
   return (
-    <div className="flex h-screen bg-slate-950">
+    <div className="flex h-screen bg-[#030712] text-slate-200 selection:bg-blue-500/30">
       <WindowTitleSync />
-      <nav className="flex flex-col w-[220px] bg-slate-900 border-r border-slate-800 shrink-0">
-        <div className="flex items-center gap-2 px-4 h-14 border-b border-slate-800">
-          <Activity className={cn('w-5 h-5', hasRunningTask ? 'text-blue-400 animate-pulse' : 'text-blue-400')} />
-          <span className="font-semibold text-white text-sm">NetworkTools</span>
-        </div>
-        <SidebarCredentialSelector />
-        <div className="flex-1 overflow-y-auto py-2">
-          {navItems.map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end
-              className={({ isActive }) => cn(
-                'flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
-                isActive
-                  ? 'bg-blue-600/20 text-blue-400 border-r-2 border-blue-400'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800',
-              )}
-            >
-              <Icon className="w-4 h-4 shrink-0" />
-              {label}
-            </NavLink>
-          ))}
-        </div>
-        <div className="px-3 py-3 border-t border-slate-800 space-y-2">
-          {hasRunningTask && (
-            <button
-              onClick={() => void backend.StopAllTasks()}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-600/20 border border-red-600/50 text-red-400 text-xs font-medium hover:bg-red-600/30 transition-colors"
-            >
-              <Square className="w-3.5 h-3.5" />
-              Arrêter les tâches
-            </button>
-          )}
-          {stopStatus && <p className="text-xs text-center text-green-400">{stopStatus}</p>}
-          <p className="text-xs text-slate-600 text-center">v1.3.0</p>
+      
+      {/* Sidebar */}
+      <nav className="flex flex-col w-[260px] bg-transparent shrink-0 py-3 pl-3">
+        <div className="flex-1 flex flex-col bg-slate-900/40 rounded-2xl border border-white/[0.04] overflow-hidden backdrop-blur-xl shadow-2xl">
+          
+          {/* Logo / Header */}
+          <div className="flex items-center gap-3 px-5 h-16 border-b border-white/[0.04] shrink-0">
+            <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
+              <Activity className={cn('w-4 h-4 text-white', hasRunningTask ? 'animate-pulse' : '')} strokeWidth={2.5} />
+            </div>
+            <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 text-sm tracking-wide">
+              NetworkTools
+            </span>
+          </div>
+
+          <SidebarCredentialSelector />
+
+          {/* Navigation Links */}
+          <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+            {navItems.map(({ to, icon: Icon, label }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end
+                className={({ isActive }) => cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative overflow-hidden',
+                  isActive
+                    ? 'bg-blue-600/15 text-blue-400 font-bold shadow-sm shadow-blue-500/10'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]',
+                )}
+              >
+                {({ isActive }) => (
+                  <>
+                    <div className={cn(
+                      "absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent opacity-0 transition-opacity duration-300", 
+                      isActive && "opacity-100"
+                    )} />
+                    {isActive && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-blue-500 rounded-r-md shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
+                    )}
+                    <Icon className={cn("w-4 h-4 shrink-0 transition-all duration-300 relative z-10", isActive ? "scale-110 drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]" : "group-hover:scale-110 group-hover:text-blue-300")} />
+                    <span className="relative z-10">{label}</span>
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </div>
+
+          {/* Footer actions */}
+          <div className="px-4 py-4 border-t border-white/[0.04] space-y-3 bg-slate-950/20">
+            {hasRunningTask && (
+              <button
+                onClick={() => void backend.StopAllTasks()}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold hover:bg-red-500/20 transition-all shadow-sm shadow-red-500/5 active:scale-95"
+              >
+                <Square className="w-3.5 h-3.5 fill-red-500/20" />
+                Arrêter les tâches
+              </button>
+            )}
+            {stopStatus && <p className="text-xs text-center text-emerald-400 font-medium animate-in fade-in slide-in-from-bottom-2">{stopStatus}</p>}
+            <p className="text-[10px] uppercase font-bold tracking-widest text-slate-600 text-center">Version 1.3.0</p>
+          </div>
         </div>
       </nav>
 
-      <main className="flex-1 overflow-hidden">
-        <Routes>
-          <Route path="/" element={<ScanPage />} />
-          <Route path="/scan" element={<ScanPage />} />
-          <Route path="/inventory" element={<InventoryPage />} />
-          <Route path="/backup" element={<BackupPage />} />
-          <Route path="/diff" element={<DiffPage />} />
-          <Route path="/audit" element={<AuditPage />} />
-          <Route path="/playbook" element={<PlaybookPage />} />
-          <Route path="/scheduler" element={<SchedulerPage />} />
-          <Route path="/topology" element={<TopologyPage />} />
-          <Route path="/logs" element={<LogsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Routes>
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-hidden p-3 relative">
+        <div className="w-full h-full bg-[#0a0f1c] rounded-2xl border border-white/[0.04] shadow-2xl overflow-hidden relative flex flex-col">
+          <Routes>
+            <Route path="/" element={<ScanPage />} />
+            <Route path="/scan" element={<ScanPage />} />
+            <Route path="/inventory" element={<InventoryPage />} />
+            <Route path="/backup" element={<BackupPage />} />
+            <Route path="/diff" element={<DiffPage />} />
+            <Route path="/audit" element={<AuditPage />} />
+            <Route path="/playbook" element={<PlaybookPage />} />
+            <Route path="/scheduler" element={<SchedulerPage />} />
+            <Route path="/topology" element={<TopologyPage />} />
+            <Route path="/logs" element={<LogsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Routes>
+        </div>
       </main>
     </div>
   )

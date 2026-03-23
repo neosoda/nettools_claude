@@ -338,63 +338,85 @@ export default function PlaybookPage() {
         {activeTab === 'playbooks' ? (
           <div className="space-y-4">
             {/* Playbook grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 content-start">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 content-start">
               {(playbooks as any[]).map((pb: any) => (
-                <div key={pb.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
-                  <div>
-                    <FileCode className="w-4 h-4 text-blue-400 mb-1" />
-                    <h3 className="font-medium text-white">{pb.name}</h3>
-                    {pb.description && <p className="text-xs text-slate-500 mt-0.5">{pb.description}</p>}
-                  </div>
-                  <pre className="text-xs text-slate-500 bg-slate-950 p-2 rounded overflow-hidden max-h-24 font-mono">
-                    {pb.content}
-                  </pre>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="primary" onClick={() => { setRunModal(pb); setResults([]) }}>
-                      <Play className="w-3.5 h-3.5" /> Run
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => openEdit(pb)}>Éditer</Button>
-                    <Button size="sm" variant="ghost" onClick={() => deleteMutation.mutate(pb.id)}>
-                      <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                    </Button>
+                <div key={pb.id} className="bg-slate-900/40 backdrop-blur-md border border-white/[0.05] rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:bg-slate-900/60 transition-all duration-300">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-indigo-500/10 transition-colors" />
+                  
+                  <div className="relative z-10">
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-500/20 transition-all">
+                        <FileCode className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0 pt-0.5">
+                        <h3 className="font-bold text-slate-200 truncate">{pb.name}</h3>
+                        {pb.description && <p className="text-xs text-slate-500 truncate mt-0.5" title={pb.description}>{pb.description}</p>}
+                      </div>
+                    </div>
+                    
+                    <pre className="text-[10px] text-slate-400 bg-slate-950/60 border border-slate-800/60 p-3 rounded-xl overflow-hidden max-h-28 font-mono shadow-inner custom-scrollbar mb-5 relative">
+                      <div className="absolute top-0 right-0 px-2 py-0.5 bg-slate-800/80 rounded-bl-lg text-[9px] uppercase tracking-wider font-bold text-slate-500">YAML</div>
+                      {pb.content}
+                    </pre>
+                    
+                    <div className="flex justify-between items-center pt-4 border-t border-white/[0.04]">
+                      <Button size="sm" variant="primary" onClick={() => { setRunModal(pb); setResults([]) }} className="shadow-indigo-500/20 px-4">
+                        <Play className="w-3.5 h-3.5" /> Exécuter
+                      </Button>
+                      <div className="flex gap-1">
+                        <Button size="icon" variant="ghost" onClick={() => openEdit(pb)} className="hover:bg-blue-500/10 hover:text-blue-400 w-8 h-8 rounded-lg" title="Éditer">
+                          <Code className="w-4 h-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" onClick={() => deleteMutation.mutate(pb.id)} className="hover:bg-red-500/10 hover:text-red-400 w-8 h-8 rounded-lg" title="Supprimer">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
               {(playbooks as any[]).length === 0 && (
-                <div className="col-span-3 text-center py-16 text-slate-500">
-                  <FileCode className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                  <p className="mb-4">Aucun playbook. Créez-en un ou utilisez un exemple du Guide.</p>
-                  <div className="flex justify-center gap-3">
-                    <Button variant="primary" onClick={openNewSimple}>
-                      <Terminal className="w-4 h-4" /> Commandes rapides
-                    </Button>
-                    <Button variant="secondary" onClick={openNewAdvanced}>
-                      <Code className="w-4 h-4" /> YAML avancé
-                    </Button>
+                <div className="col-span-full md:col-span-2 lg:col-span-3">
+                  <div className="bg-slate-900/40 backdrop-blur-md border border-white/[0.05] rounded-2xl py-16 text-center shadow-lg relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent pointer-events-none" />
+                    <FileCode className="w-16 h-16 mx-auto mb-4 text-slate-600 drop-shadow-md" />
+                    <p className="text-lg font-bold text-slate-300 mb-1">Aucun playbook trouvé</p>
+                    <p className="text-sm text-slate-500 mb-6 max-w-md mx-auto">Automatisez vos tâches réseau en créant des playbooks. Utilisez le mode simple ou écrivez directement en YAML.</p>
+                    <div className="flex justify-center gap-3 relative z-10">
+                      <Button variant="primary" onClick={openNewSimple} className="shadow-blue-500/25">
+                        <Terminal className="w-4 h-4" /> Créer en mode Simple
+                      </Button>
+                      <Button variant="secondary" onClick={openNewAdvanced}>
+                        <Code className="w-4 h-4" /> Créer en mode Avancé
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
             </div>
           </div>
         ) : (
-          <div className="space-y-6 max-w-4xl">
+          <div className="space-y-6 max-w-5xl mx-auto">
             {/* Guide sections */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-              <div className="px-5 py-3 border-b border-slate-800">
-                <h2 className="text-sm font-semibold text-slate-300">Guide des playbooks</h2>
+            <div className="bg-slate-900/40 backdrop-blur-md border border-white/[0.05] rounded-2xl p-1 shadow-lg overflow-hidden">
+              <div className="px-5 py-4 border-b border-white/[0.04] bg-slate-950/40">
+                <h2 className="text-sm font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                  Guide des playbooks
+                </h2>
               </div>
-              <div className="divide-y divide-slate-800">
+              <div className="divide-y divide-white/[0.02]">
                 {GUIDE_SECTIONS.map((section, i) => (
                   <div key={i}>
                     <button
                       onClick={() => setOpenSection(openSection === i ? null : i)}
-                      className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-slate-800/50 transition-colors">
-                      <span className="text-sm font-medium text-slate-200">{section.title}</span>
-                      {openSection === i ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+                      className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-white/[0.02] transition-colors group">
+                      <span className={`text-sm font-medium transition-colors ${openSection === i ? 'text-blue-400' : 'text-slate-300 group-hover:text-white'}`}>{section.title}</span>
+                      {openSection === i ? <ChevronDown className="w-4 h-4 text-blue-400" /> : <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-slate-300" />}
                     </button>
                     {openSection === i && (
-                      <div className="px-5 pb-4">
-                        <pre className="text-sm text-slate-400 whitespace-pre-wrap font-sans leading-relaxed">
+                      <div className="px-6 pb-5 pt-1">
+                        <pre className="text-sm text-slate-400 whitespace-pre-wrap font-sans leading-relaxed bg-slate-950/30 p-4 rounded-xl border border-white/[0.02]">
                           {section.content}
                         </pre>
                       </div>
@@ -404,10 +426,14 @@ export default function PlaybookPage() {
               </div>
             </div>
 
-            {/* Exemple YAML complet */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-              <h3 className="text-sm font-semibold text-slate-300 mb-3">Exemple complet commenté</h3>
-              <pre className="text-xs text-slate-300 bg-slate-950 p-4 rounded-lg font-mono leading-relaxed">{`name: Mon playbook
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Exemple YAML complet */}
+              <div className="lg:col-span-1 bg-slate-900/40 backdrop-blur-md border border-white/[0.05] rounded-2xl p-6 shadow-lg h-max">
+                <h3 className="text-sm font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2 mb-4">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                  Exemple Commenté
+                </h3>
+                <pre className="text-[11px] text-slate-400 bg-slate-950/80 p-4 rounded-xl font-mono leading-relaxed border border-white/[0.02] custom-scrollbar overflow-x-auto shadow-inner">{`name: Mon playbook
 description: Description de ce que fait ce playbook
 timeout: 120s        # Délai max total
 
@@ -422,35 +448,41 @@ steps:
 
   - name: Vérification NTP
     command: show ntp status
-    expect: Clock is synchronized  # Vérifie la présence de ce texte
+    expect: Clock is synchronized
     on_error: continue`}
-              </pre>
-            </div>
-
-            {/* Templates */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-              <div className="px-5 py-3 border-b border-slate-800">
-                <h2 className="text-sm font-semibold text-slate-300">Modèles prêts à l'emploi</h2>
-                <p className="text-xs text-slate-500 mt-0.5">Cliquez sur "Utiliser" pour créer un playbook à partir du modèle</p>
+                </pre>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-                {PLAYBOOK_TEMPLATES.map((t) => (
-                  <div key={t.name} className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="text-sm font-medium text-white">{t.name}</h4>
-                        <p className="text-xs text-slate-500 mt-0.5">{t.description}</p>
+
+              {/* Templates */}
+              <div className="lg:col-span-2 bg-slate-900/40 backdrop-blur-md border border-white/[0.05] rounded-2xl p-1 shadow-lg overflow-hidden">
+                <div className="px-6 py-4 border-b border-white/[0.04] bg-slate-950/40 flex justify-between items-center">
+                  <h2 className="text-sm font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Modèles prêts à l'emploi
+                  </h2>
+                  <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Créer à partir d'un modèle</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5">
+                  {PLAYBOOK_TEMPLATES.map((t) => (
+                    <div key={t.name} className="bg-slate-950/30 border border-white/[0.04] rounded-xl p-5 hover:border-slate-700 transition-colors group">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-200">{t.name}</h4>
+                          <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{t.description}</p>
+                        </div>
+                        <Button size="icon" variant="secondary" onClick={() => handleCopyTemplate(t)} className="w-8 h-8 rounded-lg shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" title="Utiliser ce modèle">
+                          <Copy className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <Button size="sm" variant="secondary" onClick={() => handleCopyTemplate(t)}>
-                        <Copy className="w-3.5 h-3.5" />
-                        {copied === t.name ? 'Copié !' : 'Utiliser'}
-                      </Button>
+                      <pre className="text-[10px] text-slate-500 bg-slate-950/80 p-3 rounded-lg font-mono overflow-y-auto max-h-32 custom-scrollbar shadow-inner">
+                        {t.content}
+                      </pre>
+                      {copied === t.name && (
+                        <p className="text-xs text-emerald-400 font-bold tracking-wide mt-2 animate-in fade-in">Copié dans l'éditeur !</p>
+                      )}
                     </div>
-                    <pre className="text-xs text-slate-500 bg-slate-950 p-2 rounded font-mono overflow-y-auto max-h-48">
-                      {t.content}
-                    </pre>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>

@@ -8,12 +8,14 @@ interface PageHeaderProps {
 
 export default function PageHeader({ title, description, actions }: PageHeaderProps) {
   return (
-    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50">
+    <div className="flex items-center justify-between px-8 py-5 border-b border-white/[0.04] bg-slate-900/30 backdrop-blur-md sticky top-0 z-10">
       <div>
-        <h1 className="text-lg font-semibold text-white">{title}</h1>
-        {description && <p className="text-sm text-slate-400 mt-0.5">{description}</p>}
+        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400 tracking-tight">
+          {title}
+        </h1>
+        {description && <p className="text-sm font-medium text-slate-400 mt-1">{description}</p>}
       </div>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
+      {actions && <div className="flex items-center gap-3">{actions}</div>}
     </div>
   )
 }

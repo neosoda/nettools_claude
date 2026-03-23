@@ -30,16 +30,16 @@ const icons: Record<ToastType, typeof CheckCircle> = {
 }
 
 const styles: Record<ToastType, string> = {
-  success: 'border-green-600/50 bg-green-950/80 text-green-300',
-  error: 'border-red-600/50 bg-red-950/80 text-red-300',
-  warning: 'border-yellow-600/50 bg-yellow-950/80 text-yellow-300',
-  info: 'border-blue-600/50 bg-blue-950/80 text-blue-300',
+  success: 'border-emerald-500/30 bg-emerald-950/40 text-emerald-200 shadow-[0_8px_30px_rgb(16,185,129,0.12)]',
+  error: 'border-red-500/30 bg-red-950/40 text-red-200 shadow-[0_8px_30px_rgb(239,68,68,0.12)]',
+  warning: 'border-amber-500/30 bg-amber-950/40 text-amber-200 shadow-[0_8px_30px_rgb(245,158,11,0.12)]',
+  info: 'border-blue-500/30 bg-blue-950/40 text-blue-200 shadow-[0_8px_30px_rgb(59,130,246,0.12)]',
 }
 
 const iconStyles: Record<ToastType, string> = {
-  success: 'text-green-400',
+  success: 'text-emerald-400',
   error: 'text-red-400',
-  warning: 'text-yellow-400',
+  warning: 'text-amber-400',
   info: 'text-blue-400',
 }
 
@@ -51,7 +51,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts(prev => [...prev, { id, message, type }])
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id))
-    }, 4000)
+    }, 4500)
   }, [])
 
   const removeToast = useCallback((id: number) => {
@@ -61,20 +61,23 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast: addToast }}>
       {children}
-      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 max-w-sm">
+      <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 max-w-sm w-full font-sans">
         {toasts.map(t => {
           const Icon = icons[t.type]
           return (
             <div
               key={t.id}
               className={cn(
-                'flex items-start gap-3 px-4 py-3 rounded-lg border backdrop-blur-sm shadow-lg animate-in slide-in-from-right-5 text-sm',
+                'flex items-start gap-3 px-4 py-3.5 rounded-xl border backdrop-blur-xl animate-in slide-in-from-right-8 fade-in duration-300 text-sm font-medium tracking-wide',
                 styles[t.type]
               )}
             >
-              <Icon className={cn('w-4 h-4 mt-0.5 shrink-0', iconStyles[t.type])} />
-              <span className="flex-1">{t.message}</span>
-              <button onClick={() => removeToast(t.id)} className="shrink-0 opacity-60 hover:opacity-100">
+              <Icon className={cn('w-4 h-4 mt-0.5 shrink-0 animate-pulse', iconStyles[t.type])} />
+              <span className="flex-1 drop-shadow-sm">{t.message}</span>
+              <button 
+                onClick={() => removeToast(t.id)} 
+                className={cn('shrink-0 p-1 rounded-md transition-colors opacity-60 hover:opacity-100 hover:bg-white/10', iconStyles[t.type])}
+              >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>

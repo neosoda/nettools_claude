@@ -1,33 +1,58 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
 :root {
-  --sidebar-width: 220px;
+  --sidebar-width: 240px;
+  /* Premium Dark Mode Foundation */
+  --bg-app: #030712; /* Very deep slate/black */
+  --bg-panel: #0f172a;
+  --bg-panel-hover: #1e293b;
+  --border-muted: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --accent: #3b82f6;
+  --accent-glow: rgba(59, 130, 246, 0.4);
 }
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: #0f172a;
-  color: #e2e8f0;
+  font-family: var(--font-sans);
+  background: var(--bg-app);
+  color: var(--text-primary);
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 * { box-sizing: border-box; }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #1e293b; }
-::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+/* Elegant custom scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-.diff-added { background: rgba(34, 197, 94, 0.15); border-left: 3px solid #22c55e; }
-.diff-removed { background: rgba(239, 68, 68, 0.15); border-left: 3px solid #ef4444; }
-.diff-equal { opacity: 0.7; }
+/* Custom utility classes */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
 
-.react-flow__node { font-size: 12px; }
+.diff-added { background: rgba(34, 197, 94, 0.1); border-left: 3px solid #22c55e; }
+.diff-removed { background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; }
+.diff-equal { opacity: 0.6; }
+
+.react-flow__node { font-size: 12px; font-family: var(--font-sans); }
 .react-flow__edge-path { stroke: #475569; }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.9); }
 }
-.pulse-dot { animation: pulse-dot 2s infinite; }
+.pulse-dot { animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+

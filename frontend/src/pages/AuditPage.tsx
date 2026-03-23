@@ -130,114 +130,122 @@ export default function AuditPage() {
           <Button size="sm" variant={activeTab === 'rules' ? 'primary' : 'secondary'} onClick={() => setActiveTab('rules')}>Regles</Button>
         </div>}
       />
-      <div className="flex-1 overflow-auto p-6 space-y-4">
+      <div className="flex-1 overflow-auto p-6 space-y-6">
         {activeTab === 'run' ? (
           <>
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-300">Equipements a auditer</h2>
-                <div className="flex gap-1 bg-slate-800 rounded-lg p-0.5">
+            <div className="bg-slate-900/40 backdrop-blur-md border border-white/[0.05] rounded-2xl p-6 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+              <div className="flex items-center justify-between mb-6 relative z-10">
+                <h2 className="text-sm font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Equipements a auditer
+                </h2>
+                <div className="flex bg-slate-950/50 rounded-xl p-1 border border-white/[0.02]">
                   {(['last_scan', 'manual'] as DeviceSource[]).map(mode => (
                     <button key={mode} onClick={() => setDeviceSource(mode)}
-                      className={`px-3 py-1 rounded-md text-xs transition-colors ${deviceSource === mode ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}>
-                      {mode === 'last_scan' ? 'Dernier scan' : 'Saisie manuelle'}
+                      className={`flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${deviceSource === mode ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20' : 'text-slate-400 hover:text-slate-200'}`}>
+                      {mode === 'last_scan' ? 'Dernier Scan' : 'Saisie Manuelle'}
                     </button>
                   ))}
                 </div>
               </div>
 
               {deviceSource === 'last_scan' && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs text-slate-500">{selectedDevices.length} equipement(s) selectionne(s)</p>
+                <div className="relative z-10 mb-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-semibold text-slate-300 tracking-wide">
+                      Sélection des équipements ({selectedDevices.length}/{lastScanDevices.length})
+                    </p>
                     <button onClick={() => setSelectedDevices(selectedDevices.length === lastScanDevices.length ? [] : lastScanDevices.map((d: any) => d.id))}
-                      className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
-                      {selectedDevices.length === lastScanDevices.length ? 'Tout deselectionner' : 'Tout selectionner'}
+                      className="text-xs text-blue-400 font-medium hover:text-blue-300 transition-colors uppercase tracking-wider">
+                      {selectedDevices.length === lastScanDevices.length ? 'Désélectionner Tout' : 'Sélectionner Tout'}
                     </button>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto custom-scrollbar p-1">
                     {lastScanDevices.map((d: any) => (
                       <button key={d.id}
                         onClick={() => setSelectedDevices(prev => prev.includes(d.id) ? prev.filter(x => x !== d.id) : [...prev, d.id])}
-                        className={`px-3 py-1.5 rounded-md text-xs border ${selectedDevices.includes(d.id) ? 'bg-blue-600/20 border-blue-600 text-blue-400' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
+                        className={`relative px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 shadow-sm ${selectedDevices.includes(d.id) ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-slate-900 border-slate-700/60 text-slate-400 hover:bg-slate-800'}`}>
                         {d.hostname || d.ip}
                       </button>
                     ))}
                     {lastScanDevices.length === 0 && (
-                      <p className="text-xs text-amber-400">Aucun equipement dans le dernier scan. Lancez une decouverte reseau d'abord.</p>
+                      <p className="text-xs font-medium text-amber-500 bg-amber-500/10 px-3 py-2 rounded-lg border border-amber-500/20">Aucun equipement dans le dernier scan. Lancez une decouverte reseau d'abord.</p>
                     )}
                   </div>
                 </div>
               )}
 
               {deviceSource === 'manual' && (
-                <div>
-                  <label className="text-xs font-medium text-slate-400 block mb-1">
+                <div className="space-y-2 relative z-10 w-full mb-5">
+                  <label className="text-xs font-semibold text-slate-300 tracking-wide block">
                     Liste d'IPs (une par ligne ou separees par virgule)
                   </label>
                   <textarea value={manualIpText} onChange={e => setManualIpText(e.target.value)}
                     placeholder={"10.113.76.1\n10.113.76.2"}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-md p-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500 resize-none"
+                    className="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl p-4 text-xs font-mono text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-slate-600 transition-all duration-200 resize-none shadow-inner"
                     rows={3} />
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-slate-500 font-medium tracking-wide">
                     L'audit analysera les backups existants pour ces IPs.
                   </p>
                 </div>
               )}
 
               {/* Rule filter */}
-              <div className="border-t border-slate-800 pt-3">
-                <div className="flex items-center justify-between mb-2">
+              <div className="border-t border-white/[0.04] pt-4 relative z-10">
+                <div className="flex items-center justify-between mb-4">
                   <button onClick={() => setShowRuleFilter(v => !v)}
-                    className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-200 transition-colors">
-                    <span className={`transition-transform ${showRuleFilter ? 'rotate-90' : ''}`}>&#9654;</span>
-                    Regles appliquees ({selectedRules.length}/{(rules as any[]).length})
+                    className="flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white transition-colors tracking-wide">
+                    <span className={`transition-transform duration-200 ${showRuleFilter ? 'rotate-90' : ''}`}>&#9654;</span>
+                    Regles appliquees <span className="text-slate-500">({selectedRules.length}/{(rules as any[]).length})</span>
                     {!allRulesSelected && (
-                      <span className="ml-1 px-1.5 py-0.5 bg-amber-900/30 border border-amber-700 rounded text-amber-400 text-xs">
+                      <span className="ml-2 px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-md text-amber-400 text-[10px] uppercase font-bold tracking-wider">
                         Filtrees
                       </span>
                     )}
                   </button>
                   {showRuleFilter && (
                     <button onClick={() => setSelectedRules(allRulesSelected ? [] : (rules as any[]).map((r: any) => r.id))}
-                      className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                      className="text-xs text-blue-400 font-medium hover:text-blue-300 transition-colors uppercase tracking-wider">
                       {allRulesSelected ? 'Tout deselectionner' : 'Tout selectionner'}
                     </button>
                   )}
                 </div>
                 {showRuleFilter && (
-                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto custom-scrollbar p-1 mb-5">
                     {(rules as any[]).map((rule: any) => (
                       <label key={rule.id}
-                        className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs border cursor-pointer transition-colors ${
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border cursor-pointer transition-all duration-200 shadow-sm ${
                           selectedRules.includes(rule.id)
-                            ? 'bg-blue-600/20 border-blue-600 text-blue-400'
-                            : 'bg-slate-800 border-slate-700 text-slate-500'}`}>
-                        <input type="checkbox" className="w-3 h-3 accent-blue-500"
+                            ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                            : 'bg-slate-900 border-slate-700/60 text-slate-400 hover:bg-slate-800'}`}>
+                        <input type="checkbox" className="w-3.5 h-3.5 accent-blue-500 rounded border-slate-700 bg-slate-900"
                           checked={selectedRules.includes(rule.id)}
                           onChange={e => setSelectedRules(prev =>
                             e.target.checked ? [...prev, rule.id] : prev.filter(id => id !== rule.id)
                           )} />
-                        <span className={`w-1.5 h-1.5 rounded-full ${
-                          rule.severity === 'critical' ? 'bg-red-500' :
-                          rule.severity === 'high' ? 'bg-orange-500' :
-                          rule.severity === 'medium' ? 'bg-yellow-500' : 'bg-slate-500'}`} />
+                        <span className={`w-2 h-2 rounded-full shadow-sm ${
+                          rule.severity === 'critical' ? 'bg-red-500 shadow-red-500/50' :
+                          rule.severity === 'high' ? 'bg-orange-500 shadow-orange-500/50' :
+                          rule.severity === 'medium' ? 'bg-yellow-500 shadow-yellow-500/50' : 'bg-slate-500'}`} />
                         {rule.name}
                       </label>
                     ))}
                     {(rules as any[]).length === 0 && (
-                      <p className="text-xs text-slate-500 italic">Aucune regle configuree. Creez des regles dans l'onglet "Regles".</p>
+                      <p className="text-xs font-medium text-slate-500 bg-slate-800/50 px-3 py-2 rounded-lg border border-slate-700/50">Aucune regle configuree. Creez des regles dans l'onglet "Regles".</p>
                     )}
                   </div>
                 )}
               </div>
 
-              <Button variant="primary" loading={auditMutation.isPending}
-                disabled={!canAudit || selectedRules.length === 0}
-                onClick={() => auditMutation.mutate()}>
-                <Play className="w-4 h-4" /> Auditer
-                {!allRulesSelected && ` — ${selectedRules.length} regles`}
-              </Button>
+              <div className="relative z-10 pt-2">
+                <Button variant="primary" loading={auditMutation.isPending} className="shadow-emerald-500/25 px-8"
+                  disabled={!canAudit || selectedRules.length === 0}
+                  onClick={() => auditMutation.mutate()}>
+                  <Play className="w-4 h-4" /> Démarrer l'Audit
+                  {!allRulesSelected && ` (${selectedRules.length} ${selectedRules.length > 1 ? 'règles' : 'règle'})`}
+                </Button>
+              </div>
             </div>
 
             {/* Audit reports */}
@@ -361,48 +369,69 @@ export default function AuditPage() {
             ))}
           </>
         ) : (
-          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-slate-800 flex justify-between items-center">
-              <h2 className="text-sm font-semibold text-slate-300">Regles ({(rules as any[]).length})</h2>
+          <div className="bg-slate-900/40 backdrop-blur-md border border-white/[0.05] rounded-2xl shadow-xl overflow-hidden flex flex-col items-stretch">
+            <div className="px-6 py-4 border-b border-white/[0.04] bg-slate-950/40 flex justify-between items-center z-10 sticky top-0">
+              <h2 className="text-sm font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                Règles de conformité <span className="text-slate-500 ml-1">({(rules as any[]).length})</span>
+              </h2>
               <Button size="sm" variant="primary" onClick={() => { setEditRule({ must_match: true, severity: 'high', enabled: true, remediation: '' }); setShowRuleModal(true) }}>
-                <Plus className="w-3.5 h-3.5" /> Ajouter
+                <Plus className="w-3.5 h-3.5" /> Nouvelle Règle
               </Button>
             </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-slate-400 border-b border-slate-800">
-                  <th className="text-left p-3">Nom</th><th className="text-left p-3">Pattern</th>
-                  <th className="text-left p-3">Type</th><th className="text-left p-3">Severite</th>
-                  <th className="text-left p-3">Remediation</th>
-                  <th className="text-left p-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(rules as any[]).map((rule: any) => (
-                  <tr key={rule.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
-                    <td className="p-3 text-slate-200">{rule.name}</td>
-                    <td className="p-3 font-mono text-xs text-slate-400 max-w-xs truncate">{rule.pattern}</td>
-                    <td className="p-3 text-slate-400 text-xs">{rule.must_match ? 'Doit contenir' : 'Interdit'}</td>
-                    <td className="p-3">
-                      <span className={`text-xs px-1.5 py-0.5 rounded border ${severityColor(rule.severity)}`}>
-                        {rule.severity}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      {rule.remediation
-                        ? <span className="text-xs text-green-400">Oui</span>
-                        : <span className="text-xs text-slate-600">—</span>}
-                    </td>
-                    <td className="p-3 flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => { setEditRule(rule); setShowRuleModal(true) }}>Editer</Button>
-                      <Button size="sm" variant="ghost" onClick={() => deleteRuleMutation.mutate(rule.id)}>
-                        <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                      </Button>
-                    </td>
+            <div className="overflow-x-auto relative">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-950/50 text-slate-400 border-b border-white/[0.04] text-[11px] uppercase tracking-wider sticky top-0 z-10">
+                    <th className="text-left py-3 px-5 font-bold">Nom de la Règle</th>
+                    <th className="text-left py-3 px-5 font-bold">Pattern / Regex</th>
+                    <th className="text-left py-3 px-5 font-bold">Type</th>
+                    <th className="text-left py-3 px-5 font-bold">Sévérité</th>
+                    <th className="text-left py-3 px-5 font-bold">Remédiation auto</th>
+                    <th className="text-right py-3 px-5 font-bold">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-white/[0.02]">
+                  {(rules as any[]).map((rule: any) => (
+                    <tr key={rule.id} className="hover:bg-white/[0.02] transition-colors group">
+                      <td className="py-3 px-5 font-bold text-slate-200 tracking-wide">{rule.name}</td>
+                      <td className="py-3 px-5 font-mono text-[11px] text-slate-400 max-w-[200px] truncate" title={rule.pattern}>{rule.pattern}</td>
+                      <td className="py-3 px-5">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border text-slate-300 ${rule.must_match ? 'bg-blue-500/10 border-blue-500/20' : 'bg-rose-500/10 border-rose-500/20'}`}>
+                          {rule.must_match ? 'Doit contenir' : 'Interdit'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-5">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${severityColor(rule.severity)}`}>
+                          {rule.severity}
+                        </span>
+                      </td>
+                      <td className="py-3 px-5">
+                        {rule.remediation
+                          ? <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Oui</span>
+                          : <span className="text-[11px] text-slate-500 italic px-2 py-0.5">—</span>}
+                      </td>
+                      <td className="py-3 px-5 flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button size="sm" variant="ghost" className="bg-white/[0.02]" onClick={() => { setEditRule(rule); setShowRuleModal(true) }}>Éditer</Button>
+                        <Button size="icon" variant="ghost" className="bg-white/[0.02] w-8 h-8 rounded hover:bg-red-500/10 hover:text-red-400" onClick={() => deleteRuleMutation.mutate(rule.id)}>
+                          <Trash2 className="w-4 h-4 text-red-400" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                  {(rules as any[]).length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center py-16">
+                        <div className="flex flex-col items-center justify-center text-slate-500">
+                           <span className="font-medium text-slate-300 mb-1">Aucune règle définie</span>
+                           <span className="text-sm">Ajoutez des règles pour lancer des audits de conformité réseau.</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
