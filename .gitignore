@@ -8,3 +8,6 @@ frontend/node_modules/
 *.exe
 *.log
 .DS_Store
+build/ 
+OLD/ 
+*.md5 
