@@ -5,9 +5,12 @@ import Button from '../components/Button'
 import Input from '../components/Input'
 import { EventsOn } from '../../wailsjs/runtime/runtime'
 import { useGlobalCredential } from '../context/CredentialContext'
+import { callBackend } from '../lib/api'
 import { getBackend } from '../lib/backend'
+import { Device } from '../types/models'
 
-function formatUptime(seconds: number) {
+
+function formatUptime(seconds?: number) {
   if (!seconds || seconds <= 0) return '—'
   const days = Math.floor(seconds / 86400)
   const hours = Math.floor((seconds % 86400) / 3600)
@@ -36,7 +39,7 @@ export default function ScanPage() {
   const [timeout, setTimeoutVal] = useState('3')
   const [scanning, setScanning] = useState(false)
   const [progress, setProgress] = useState<{ ip: string; done: number; total: number; percent: number } | null>(null)
-  const [results, setResults] = useState<any[]>([])
+  const [results, setResults] = useState<Device[]>([])
   const [scanDone, setScanDone] = useState(false)
   const [error, setError] = useState('')
   const [testIp, setTestIp] = useState('')
@@ -59,6 +62,8 @@ export default function ScanPage() {
     setResults([])
     resultDeviceIds.current = []
 
+    // Enforce a safe upper bound for workers to avoid OOM
+    const safeWorkers = Math.min(parseInt(workers), 50)
     let scanCidr = ''
     let ipList: string[] = []
 
@@ -75,18 +80,18 @@ export default function ScanPage() {
 
     try {
       const m = await getBackend()
-      const discovered = await m.ScanNetwork({
+      const discovered = await callBackend(() => m.ScanNetwork({
         cidr: scanCidr,
         ip_list: ipList,
         community: community.trim() || 'TICE',
         credential_id: globalCredId,
-        workers: parseInt(workers),
+        workers: safeWorkers,
         timeout_sec: parseInt(timeout),
-      })
-      const devs = discovered || []
-      setResults(devs)
-      resultDeviceIds.current = devs.map((d: any) => d.id)
-      setScanDone(true)
+      }))
+      const devs = (discovered || []) as Device[];
+    setResults(devs);
+    resultDeviceIds.current = devs.map(d => d.id);
+    setScanDone(true);
     } catch (e: any) {
       setError(e?.message || String(e))
     } finally {
@@ -97,7 +102,7 @@ export default function ScanPage() {
 
   const handleStop = async () => {
     const m = await getBackend()
-    await m.StopAllTasks()
+    await callBackend(() => m.StopAllTasks())
     setScanning(false)
     setProgress(null)
   }
@@ -108,7 +113,7 @@ export default function ScanPage() {
     setTestResult(null)
     try {
       const m = await getBackend()
-      const r = await m.TestSNMPHost(testIp.trim(), community.trim() || 'TICE', 'v2c', parseInt(timeout))
+      const r = await callBackend(() => m.TestSNMPHost(testIp.trim(), community.trim() || 'TICE', 'v2c', parseInt(timeout)))
       setTestResult(r)
     } finally {
       setTesting(false)
@@ -119,7 +124,7 @@ export default function ScanPage() {
     setExporting(true)
     try {
       const m = await getBackend()
-      await m.ExportScanToExcel(resultDeviceIds.current)
+      await callBackend(() => m.ExportScanToExcel(resultDeviceIds.current))
     } catch (e: any) {
       setError('Export Excel : ' + (e?.message || String(e)))
     } finally {
@@ -300,7 +305,7 @@ export default function ScanPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.02]">
-                  {results.map((d: any) => (
+                  {results.map((d: Device) => (
                     <tr key={d.id} className="hover:bg-white/[0.02] transition-colors group">
                       <td className="py-3 px-5">
                         <span className="font-mono text-blue-400 font-medium bg-blue-500/5 px-2 py-1 rounded-md border border-blue-500/10 group-hover:border-blue-500/30 transition-colors">
