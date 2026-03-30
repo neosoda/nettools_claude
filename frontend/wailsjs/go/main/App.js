@@ -110,6 +110,10 @@ export function GetTopology() {
   return window['go']['main']['App']['GetTopology']();
 }
 
+export function CollectLLDP() {
+  return window['go']['main']['App']['CollectLLDP']();
+}
+
 export function RunAudit(arg1) {
   return window['go']['main']['App']['RunAudit'](arg1);
 }

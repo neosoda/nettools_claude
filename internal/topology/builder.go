@@ -3,6 +3,7 @@ package topology
 import (
 	"fmt"
 	"net"
+	"sort"
 	"strings"
 
 	"networktools/internal/db"
@@ -23,10 +24,13 @@ type Node struct {
 
 // Edge represents a connection between two nodes
 type Edge struct {
-	ID     string `json:"id"`
-	Source string `json:"source"`
-	Target string `json:"target"`
-	Label  string `json:"label"`
+	ID         string `json:"id"`
+	Source     string `json:"source"`
+	Target     string `json:"target"`
+	Label      string `json:"label"`
+	LinkType   string `json:"link_type"`   // "trunk"|"access"|"unknown"|"subnet"
+	LocalPort  string `json:"local_port"`
+	RemotePort string `json:"remote_port"`
 }
 
 // Graph holds the full topology
@@ -68,7 +72,9 @@ func matchAny(s string, patterns ...string) bool {
 	return false
 }
 
-// Build constructs the topology graph from the device inventory
+// Build constructs the topology graph from the device inventory.
+// It uses LLDP-discovered links (DeviceLink table) as the primary source,
+// falling back to the subnet heuristic for devices that have no LLDP data.
 func Build() (*Graph, error) {
 	var devices []models.Device
 	if err := db.DB.Find(&devices).Error; err != nil {
@@ -101,20 +107,121 @@ func Build() (*Graph, error) {
 		graph.Nodes = append(graph.Nodes, node)
 	}
 
-	// Detect edges: devices sharing the same /24 subnet are considered linked
-	graph.Edges = detectSubnetEdges(devices)
+	// Load LLDP-discovered links
+	var lldpLinks []models.DeviceLink
+	_ = db.DB.Find(&lldpLinks).Error // non-fatal if table is empty
+
+	lldpEdges, devicesWithLLDP := buildLLDPEdges(lldpLinks)
+	graph.Edges = lldpEdges
+
+	// Fallback: for devices that have no LLDP data at all, add subnet edges
+	// so they still appear connected (shown as dashed "subnet" links).
+	var orphans []models.Device
+	for _, d := range devices {
+		if !devicesWithLLDP[d.ID] {
+			orphans = append(orphans, d)
+		}
+	}
+	if len(orphans) > 1 {
+		subnetEdges := detectSubnetEdges(orphans, len(lldpEdges))
+		graph.Edges = append(graph.Edges, subnetEdges...)
+	}
 
 	return graph, nil
 }
 
-// detectSubnetEdges creates edges between devices on the same /24 subnet.
-// This is a heuristic: devices on the same subnet are likely connected via the same switch/router.
-func detectSubnetEdges(devices []models.Device) []Edge {
-	type subnetGroup struct {
-		subnet string
-		ids    []string
+// buildLLDPEdges converts DeviceLink records into deduplicated topology edges.
+// Returns the edges and the set of device IDs that had at least one LLDP link.
+func buildLLDPEdges(links []models.DeviceLink) ([]Edge, map[string]bool) {
+	// canonical edge key: sorted pair of (localDeviceID, remoteDeviceID)
+	// Only create an edge if both ends are known devices.
+	type edgeKey struct{ a, b string }
+	seen := make(map[edgeKey]bool)
+	devicesWithLLDP := make(map[string]bool)
+
+	var edges []Edge
+	edgeID := 0
+
+	for _, l := range links {
+		devicesWithLLDP[l.LocalDeviceID] = true
+
+		// Only draw an edge when the remote is a known device in the DB
+		if l.RemoteDeviceID == "" {
+			continue
+		}
+		devicesWithLLDP[l.RemoteDeviceID] = true
+
+		// Deduplicate bidirectional links (A→B == B→A)
+		src, dst := l.LocalDeviceID, l.RemoteDeviceID
+		key := edgeKey{a: src, b: dst}
+		if src > dst {
+			key = edgeKey{a: dst, b: src}
+		}
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+
+		edgeID++
+		localPort := l.LocalPort
+		remotePort := l.RemotePort
+		label := buildPortLabel(localPort, remotePort)
+
+		edges = append(edges, Edge{
+			ID:         fmt.Sprintf("lldp-%d", edgeID),
+			Source:     src,
+			Target:     dst,
+			Label:      label,
+			LinkType:   l.LinkType,
+			LocalPort:  localPort,
+			RemotePort: remotePort,
+		})
 	}
 
+	// Sort for deterministic output
+	sort.Slice(edges, func(i, j int) bool { return edges[i].ID < edges[j].ID })
+	return edges, devicesWithLLDP
+}
+
+// buildPortLabel builds a human-readable label from two port names.
+func buildPortLabel(local, remote string) string {
+	local = shortenPort(local)
+	remote = shortenPort(remote)
+	if local == "" && remote == "" {
+		return ""
+	}
+	if remote == "" {
+		return local
+	}
+	if local == "" {
+		return remote
+	}
+	return local + " ↔ " + remote
+}
+
+// shortenPort converts long interface names to abbreviated forms.
+// e.g. "GigabitEthernet1/0/1" → "Gi1/0/1", "TenGigabitEthernet1/1" → "Te1/1"
+func shortenPort(name string) string {
+	replacements := []struct{ from, to string }{
+		{"HundredGigabitEthernet", "Hu"},
+		{"FortyGigabitEthernet", "Fo"},
+		{"TenGigabitEthernet", "Te"},
+		{"GigabitEthernet", "Gi"},
+		{"FastEthernet", "Fa"},
+		{"Ethernet", "Et"},
+	}
+	for _, r := range replacements {
+		if strings.HasPrefix(strings.ToLower(name), strings.ToLower(r.from)) {
+			return r.to + name[len(r.from):]
+		}
+	}
+	return name
+}
+
+// detectSubnetEdges creates edges between devices on the same /24 subnet.
+// This is a fallback heuristic used only for devices without LLDP data.
+// edgeOffset is used to avoid ID collisions with LLDP edges.
+func detectSubnetEdges(devices []models.Device, edgeOffset int) []Edge {
 	subnets := make(map[string][]string) // /24 prefix -> device IDs
 	for _, d := range devices {
 		ip := net.ParseIP(d.IP)
@@ -130,7 +237,7 @@ func detectSubnetEdges(devices []models.Device) []Edge {
 	}
 
 	var edges []Edge
-	edgeID := 0
+	edgeID := edgeOffset
 	for prefix, ids := range subnets {
 		if len(ids) < 2 {
 			continue
@@ -140,10 +247,11 @@ func detectSubnetEdges(devices []models.Device) []Edge {
 		for _, id := range ids[1:] {
 			edgeID++
 			edges = append(edges, Edge{
-				ID:     fmt.Sprintf("e-%d", edgeID),
-				Source: hub,
-				Target: id,
-				Label:  prefix,
+				ID:       fmt.Sprintf("subnet-%d", edgeID),
+				Source:   hub,
+				Target:   id,
+				Label:    prefix,
+				LinkType: "subnet",
 			})
 		}
 	}

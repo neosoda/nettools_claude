@@ -1517,6 +1517,166 @@ func (a *App) GetTopology() (*topology.Graph, error) {
 	return topology.Build()
 }
 
+// CollectLLDP queries all known devices via SNMP LLDP-MIB, discovers neighbor
+// relationships, classifies links as trunk or access, and persists the results
+// in the DeviceLink table. Existing entries for polled devices are replaced.
+func (a *App) CollectLLDP() error {
+	var devices []models.Device
+	if err := db.DB.Find(&devices).Error; err != nil {
+		return fmt.Errorf("load devices: %w", err)
+	}
+
+	// Build a lookup map: MAC → deviceID and hostname → deviceID for resolving remote endpoints
+	macToID := make(map[string]string, len(devices))
+	nameToID := make(map[string]string, len(devices))
+	for _, d := range devices {
+		if d.MACAddress != "" {
+			macToID[strings.ToLower(d.MACAddress)] = d.ID
+		}
+		if d.Hostname != "" {
+			nameToID[strings.ToLower(d.Hostname)] = d.ID
+		}
+	}
+
+	// Collect LLDP data from every device in parallel (up to 10 workers)
+	type deviceLinks struct {
+		deviceID string
+		links    []snmp.RawLLDPLink
+	}
+
+	jobs := make(chan models.Device, len(devices))
+	results := make(chan deviceLinks, len(devices))
+
+	workers := 10
+	if len(devices) < workers {
+		workers = len(devices)
+	}
+
+	var wg sync.WaitGroup
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for dev := range jobs {
+				community := "TICE"
+				if dev.CredentialID != "" {
+					if c, err := a.getSNMPCommunity(dev.CredentialID); err == nil {
+						community = c
+					}
+				}
+				links, err := snmp.CollectLLDPNeighbors(dev.IP, uint16(dev.SNMPPort), community, dev.SNMPVersion, snmp.ScanParams{})
+				if err != nil || len(links) == 0 {
+					results <- deviceLinks{deviceID: dev.ID, links: nil}
+					return
+				}
+				results <- deviceLinks{deviceID: dev.ID, links: links}
+			}
+		}()
+	}
+	for _, d := range devices {
+		jobs <- d
+	}
+	close(jobs)
+	go func() { wg.Wait(); close(results) }()
+
+	// Gather all raw links
+	type rawEntry struct {
+		localDevID string
+		link       snmp.RawLLDPLink
+	}
+	var allRaw []rawEntry
+	for r := range results {
+		for _, l := range r.links {
+			allRaw = append(allRaw, rawEntry{localDevID: r.deviceID, link: l})
+		}
+	}
+
+	// Count parallel links between device pairs (for LAG detection)
+	type devPair struct{ a, b string }
+	pairCount := make(map[devPair]int)
+	for _, e := range allRaw {
+		remID := resolveRemoteDevice(e.link, macToID, nameToID)
+		if remID != "" {
+			p := devPair{a: e.localDevID, b: remID}
+			if p.a > p.b {
+				p.a, p.b = p.b, p.a
+			}
+			pairCount[p]++
+		}
+	}
+
+	// Build DeviceLink records to persist
+	var toSave []models.DeviceLink
+	for _, e := range allRaw {
+		remID := resolveRemoteDevice(e.link, macToID, nameToID)
+
+		p := devPair{a: e.localDevID, b: remID}
+		if p.a > p.b {
+			p.a, p.b = p.b, p.a
+		}
+		parallel := pairCount[p]
+
+		portName := e.link.LocalPortDesc
+		if portName == "" {
+			portName = e.link.LocalPortID
+		}
+		linkType := snmp.ClassifyLinkType(portName, remID != "", parallel)
+
+		toSave = append(toSave, models.DeviceLink{
+			ID:               uuid.New().String(),
+			LocalDeviceID:    e.localDevID,
+			LocalPort:        portName,
+			RemoteDeviceID:   remID,
+			RemoteChassisMAC: e.link.RemoteChassisMAC,
+			RemotePort:       firstNonEmpty(e.link.RemotePortDesc, e.link.RemotePortID),
+			RemoteSysName:    e.link.RemoteSysName,
+			LinkType:         linkType,
+			UpdatedAt:        time.Now(),
+		})
+	}
+
+	// Replace all DeviceLink entries in a single transaction
+	return db.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("1 = 1").Delete(&models.DeviceLink{}).Error; err != nil {
+			return err
+		}
+		if len(toSave) == 0 {
+			return nil
+		}
+		return tx.Create(&toSave).Error
+	})
+}
+
+// resolveRemoteDevice tries to match a raw LLDP link to a known device ID
+// by MAC address first, then by system name.
+func resolveRemoteDevice(link snmp.RawLLDPLink, macToID, nameToID map[string]string) string {
+	if link.RemoteChassisMAC != "" {
+		if id, ok := macToID[strings.ToLower(link.RemoteChassisMAC)]; ok {
+			return id
+		}
+	}
+	if link.RemoteSysName != "" {
+		if id, ok := nameToID[strings.ToLower(link.RemoteSysName)]; ok {
+			return id
+		}
+		// Try matching just the hostname part (before first dot)
+		short := strings.ToLower(strings.SplitN(link.RemoteSysName, ".", 2)[0])
+		for name, id := range nameToID {
+			if strings.ToLower(strings.SplitN(name, ".", 2)[0]) == short {
+				return id
+			}
+		}
+	}
+	return ""
+}
+
+func firstNonEmpty(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
+}
+
 // ─────────────────────────────────────────────
 // SCHEDULER
 // ─────────────────────────────────────────────

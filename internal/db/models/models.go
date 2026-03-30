@@ -145,3 +145,18 @@ type PlaybookExecution struct {
 	DurationMs int64     `json:"duration_ms"`
 	CreatedAt  time.Time `json:"created_at"`
 }
+
+// DeviceLink represents a physical link discovered via LLDP between two devices.
+// LocalDeviceID is always a known device in the DB.
+// RemoteDeviceID is set when the remote endpoint is also known in the DB (empty otherwise).
+type DeviceLink struct {
+	ID               string    `json:"id" gorm:"primaryKey"`
+	LocalDeviceID    string    `json:"local_device_id" gorm:"index;not null"`
+	LocalPort        string    `json:"local_port"`         // ex: "GigabitEthernet1/0/1"
+	RemoteDeviceID   string    `json:"remote_device_id" gorm:"index"` // empty if remote not in DB
+	RemoteChassisMAC string    `json:"remote_chassis_mac"`
+	RemotePort       string    `json:"remote_port"`        // ex: "GigabitEthernet2/0/24"
+	RemoteSysName    string    `json:"remote_sys_name"`
+	LinkType         string    `json:"link_type"`          // "trunk"|"access"|"unknown"
+	UpdatedAt        time.Time `json:"updated_at"`
+}

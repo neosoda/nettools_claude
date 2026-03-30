@@ -807,6 +807,9 @@ export namespace topology {
 	    source: string;
 	    target: string;
 	    label: string;
+	    link_type: string;  // "trunk"|"access"|"unknown"|"subnet"
+	    local_port: string;
+	    remote_port: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Edge(source);
@@ -818,6 +821,9 @@ export namespace topology {
 	        this.source = source["source"];
 	        this.target = source["target"];
 	        this.label = source["label"];
+	        this.link_type = source["link_type"];
+	        this.local_port = source["local_port"];
+	        this.remote_port = source["remote_port"];
 	    }
 	}
 	export class RenderHint {

@@ -62,6 +62,8 @@ export function GetSettings():Promise<main.AppSettings>;
 
 export function GetTopology():Promise<topology.Graph>;
 
+export function CollectLLDP():Promise<void>;
+
 export function RunAudit(arg1:Array<string>):Promise<Array<audit.AuditReport>>;
 
 export function RunAuditFiltered(arg1:Array<string>,arg2:Array<string>):Promise<Array<audit.AuditReport>>;
