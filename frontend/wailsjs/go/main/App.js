@@ -6,6 +6,10 @@ export function ClearInventory() {
   return window['go']['main']['App']['ClearInventory']();
 }
 
+export function CollectLLDP() {
+  return window['go']['main']['App']['CollectLLDP']();
+}
+
 export function CompareBackups(arg1, arg2) {
   return window['go']['main']['App']['CompareBackups'](arg1, arg2);
 }
@@ -108,10 +112,6 @@ export function GetSettings() {
 
 export function GetTopology() {
   return window['go']['main']['App']['GetTopology']();
-}
-
-export function CollectLLDP() {
-  return window['go']['main']['App']['CollectLLDP']();
 }
 
 export function RunAudit(arg1) {

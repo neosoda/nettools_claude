@@ -13,18 +13,18 @@ import (
 	"sync"
 	"time"
 
-	"networktools/internal/audit"
-	"networktools/internal/backup"
-	"networktools/internal/db"
-	"networktools/internal/db/models"
-	"networktools/internal/diff"
-	"networktools/internal/logger"
-	"networktools/internal/playbook"
-	"networktools/internal/scheduler"
-	"networktools/internal/secret"
-	"networktools/internal/snmp"
-	"networktools/internal/ssh"
-	"networktools/internal/topology"
+	"nettools/internal/audit"
+	"nettools/internal/backup"
+	"nettools/internal/db"
+	"nettools/internal/db/models"
+	"nettools/internal/diff"
+	"nettools/internal/logger"
+	"nettools/internal/playbook"
+	"nettools/internal/scheduler"
+	"nettools/internal/secret"
+	"nettools/internal/snmp"
+	"nettools/internal/ssh"
+	"nettools/internal/topology"
 
 	"github.com/google/uuid"
 	"github.com/xuri/excelize/v2"
@@ -60,7 +60,7 @@ func (a *App) startup(ctx context.Context) {
 		home, _ := os.UserHomeDir()
 		appData = home
 	}
-	a.dataDir = filepath.Join(appData, "NetworkTools")
+	a.dataDir = filepath.Join(appData, "NetTools")
 
 	// Initialize logger
 	logDir := filepath.Join(a.dataDir, "logs")
@@ -85,7 +85,7 @@ func (a *App) startup(ctx context.Context) {
 	// Backup dir: user Downloads folder by default, overridden by settings
 	backupDir := filepath.Join(a.dataDir, "backups") // fallback
 	if homeDir, err := os.UserHomeDir(); err == nil {
-		backupDir = filepath.Join(homeDir, "Downloads", "NetworkTools_Backups")
+		backupDir = filepath.Join(homeDir, "Downloads", "NetTools_Backups")
 	}
 	// Load saved settings and apply custom backup dir if configured
 	settingsPath := filepath.Join(a.dataDir, "settings.json")
@@ -107,7 +107,7 @@ func (a *App) startup(ctx context.Context) {
 	// Clean old logs based on retention setting
 	a.cleanOldLogs()
 
-	logger.Info("NetworkTools démarré")
+	logger.Info("NetTools démarré")
 }
 
 // cleanOldLogs removes audit log DB entries and log files older than retention days
@@ -1795,7 +1795,7 @@ func (a *App) GetSettings() (*AppSettings, error) {
 	// Default backup dir: user Downloads folder
 	defaultBackupDir := filepath.Join(a.dataDir, "backups")
 	if homeDir, err := os.UserHomeDir(); err == nil {
-		defaultBackupDir = filepath.Join(homeDir, "Downloads", "NetworkTools_Backups")
+		defaultBackupDir = filepath.Join(homeDir, "Downloads", "NetTools_Backups")
 	}
 
 	settingsPath := filepath.Join(a.dataDir, "settings.json")

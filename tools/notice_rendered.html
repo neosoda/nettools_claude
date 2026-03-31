@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NetworkTools — Notice d'utilisation</title>
+<title>NetTools — Notice d'utilisation</title>
 <style>
 
 /* ──────────────────────────────────────────────
@@ -487,7 +487,7 @@ hr {
     size: A4;
 
     @top-center {
-      content: "NetworkTools — Notice d'utilisation";
+      content: "NetTools — Notice d'utilisation";
       font-family: 'Inter', sans-serif;
       font-size: 7.5pt;
       color: #94a3b8;
@@ -534,7 +534,7 @@ hr {
 <!-- ══════════════════════ COVER PAGE ══════════════════════ -->
 <div class="cover">
   <div class="cover-logo">🌐</div>
-  <div class="cover-title">NetworkTools</div>
+  <div class="cover-title">NetTools</div>
   <div class="cover-line"></div>
   <div class="cover-subtitle">Notice d'utilisation complète</div>
   <div class="cover-badges">
@@ -609,8 +609,8 @@ Wails v2 · Go · React · SQLite · Windows</p>
 </ol>
 <hr />
 <h2 id="1-presentation-generale">1. Présentation générale</h2>
-<h3 id="quest-ce-que-networktools">Qu'est-ce que NetworkTools ?</h3>
-<p>NetworkTools est une application desktop autonome pour <strong>Windows</strong> destinée aux administrateurs réseau. Elle regroupe dans une seule interface les opérations les plus courantes de gestion d'infrastructure réseau :</p>
+<h3 id="quest-ce-que-nettools">Qu'est-ce que NetTools ?</h3>
+<p>NetTools est une application desktop autonome pour <strong>Windows</strong> destinée aux administrateurs réseau. Elle regroupe dans une seule interface les opérations les plus courantes de gestion d'infrastructure réseau :</p>
 <ul>
 <li><strong>Découverte</strong> des équipements par scan SNMP</li>
 <li><strong>Sauvegarde</strong> automatisée des configurations (running/startup)</li>
@@ -635,13 +635,13 @@ Planificateur   robfig/cron v3
 </code></pre>
 <p>L'application est un <strong>unique fichier <code>.exe</code></strong> embarquant à la fois le frontend React et le backend Go. Aucun serveur, aucune dépendance réseau externe : tout tourne localement.</p>
 <h3 id="donnees-stockees">Données stockées</h3>
-<p>Tout est conservé dans <code>%APPDATA%\NetworkTools\</code> :</p>
-<pre><code>%APPDATA%\NetworkTools\
-├── networktools.db          Base de données SQLite
+<p>Tout est conservé dans <code>%APPDATA%\NetTools\</code> :</p>
+<pre><code>%APPDATA%\NetTools\
+├── nettools.db          Base de données SQLite
 ├── settings.json            Préférences utilisateur
 ├── backups\                 Fichiers de configuration sauvegardés
 └── logs\
-    └── networktools-YYYY-MM.log   Journaux mensuels
+    └── nettools-YYYY-MM.log   Journaux mensuels
 </code></pre>
 <hr />
 <h2 id="2-installation-et-premier-lancement">2. Installation et premier lancement</h2>
@@ -1783,7 +1783,7 @@ Audit échoué
 → &quot;Lancer d'abord un backup de l'équipement avant l'audit&quot;
 </code></pre>
 <h3 id="onglet-fichiers-journaux">Onglet Fichiers journaux</h3>
-<p>Le panneau gauche liste les fichiers de logs mensuels (<code>networktools-2025-11.log</code>). Cliquer sur un fichier pour afficher son contenu brut dans le panneau droit.</p>
+<p>Le panneau gauche liste les fichiers de logs mensuels (<code>nettools-2025-11.log</code>). Cliquer sur un fichier pour afficher son contenu brut dans le panneau droit.</p>
 <p>Les logs sont au format JSON structuré (zerolog) :</p>
 <pre><code class="language-json">{&quot;level&quot;:&quot;info&quot;,&quot;time&quot;:&quot;2025-11-14T08:30:01Z&quot;,&quot;action&quot;:&quot;backup_completed&quot;,
  &quot;device_id&quot;:&quot;...&quot;,&quot;duration_ms&quot;:1240,&quot;status&quot;:&quot;success&quot;}
@@ -1892,7 +1892,7 @@ Audit échoué
 <tr>
 <td>Répertoire backup</td>
 <td>Dossier de stockage des configs</td>
-<td><code>%APPDATA%\NetworkTools\backups</code></td>
+<td><code>%APPDATA%\NetTools\backups</code></td>
 </tr>
 </tbody>
 </table>
@@ -2186,18 +2186,18 @@ steps:
 </code></pre>
 <h3 id="base-de-donnees">Base de données</h3>
 <p><strong>Symptôme :</strong> Erreur "database is locked"</p>
-<pre><code>→ Une autre instance de NetworkTools est peut-être ouverte
+<pre><code>→ Une autre instance de NetTools est peut-être ouverte
 → Fermer toutes les instances et relancer
 </code></pre>
 <p><strong>Fichier de base de données :</strong></p>
-<pre><code>%APPDATA%\NetworkTools\networktools.db
+<pre><code>%APPDATA%\NetTools\nettools.db
 </code></pre>
 <p>Ce fichier SQLite peut être ouvert avec DB Browser for SQLite pour inspection directe.</p>
 <h3 id="logs-de-diagnostic">Logs de diagnostic</h3>
-<p>Les logs détaillés sont dans <code>%APPDATA%\NetworkTools\logs\networktools-YYYY-MM.log</code>.</p>
+<p>Les logs détaillés sont dans <code>%APPDATA%\NetTools\logs\nettools-YYYY-MM.log</code>.</p>
 <p>Format JSON structuré, consultable directement dans l'application (Journaux → Fichiers journaux) ou avec un éditeur texte.</p>
 <hr />
-<p><em>NetworkTools — Région Grand Est — Administration réseau</em>
+<p><em>NetTools — Région Grand Est — Administration réseau</em>
 <em>Stack : Wails v2 · Go · React · SQLite · zerolog</em></p>
 </div>
 

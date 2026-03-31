@@ -10,6 +10,8 @@ import {ssh} from '../models';
 
 export function ClearInventory():Promise<void>;
 
+export function CollectLLDP():Promise<void>;
+
 export function CompareBackups(arg1:string,arg2:string):Promise<diff.DiffResult>;
 
 export function CompareDiff(arg1:main.DiffRequest):Promise<diff.DiffResult>;
@@ -61,8 +63,6 @@ export function GetScheduledJobs():Promise<Array<models.ScheduledJob>>;
 export function GetSettings():Promise<main.AppSettings>;
 
 export function GetTopology():Promise<topology.Graph>;
-
-export function CollectLLDP():Promise<void>;
 
 export function RunAudit(arg1:Array<string>):Promise<Array<audit.AuditReport>>;
 

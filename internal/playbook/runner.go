@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"networktools/internal/db"
-	"networktools/internal/db/models"
-	"networktools/internal/ssh"
+	"nettools/internal/db"
+	"nettools/internal/db/models"
+	"nettools/internal/ssh"
 
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"

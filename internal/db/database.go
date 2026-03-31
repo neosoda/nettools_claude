@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"networktools/internal/db/models"
+	"nettools/internal/db/models"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -18,7 +18,7 @@ var DB *gorm.DB
 func Ready() bool { return DB != nil }
 
 func Init(appDataDir string) error {
-	dbPath := filepath.Join(appDataDir, "networktools.db")
+	dbPath := filepath.Join(appDataDir, "nettools.db")
 
 	// Ensure directory exists
 	if err := os.MkdirAll(appDataDir, 0700); err != nil {

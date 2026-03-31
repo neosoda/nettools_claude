@@ -1,7 +1,8 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "networktools",
-  "outputfilename": "Nettools_claude",
+  "name": "nettools",
+  "outputfilename": "NetTools",
+  "icon": "build/appicon.ico",
   "frontend:install": "npm install --legacy-peer-deps",
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
@@ -9,5 +10,8 @@
   "author": {
     "name": "neosoda",
     "email": "neosoda@gmail.com"
+  },
+  "windows": {
+    "icon": "build/appicon.ico"
   }
 }

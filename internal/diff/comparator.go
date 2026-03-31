@@ -174,7 +174,7 @@ tr.eq td.c{color:#4b5563}
   </div>
 </div>
 <table>%s</table>
-<div class="ftr">Généré par NetworkTools le %s</div>
+<div class="ftr">Généré par NetTools le %s</div>
 </body>
 </html>`,
 		html.EscapeString(nameA), html.EscapeString(nameB),

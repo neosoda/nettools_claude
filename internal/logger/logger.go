@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"networktools/internal/db"
-	"networktools/internal/db/models"
+	"nettools/internal/db"
+	"nettools/internal/db/models"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -26,7 +26,7 @@ func Init(logDir string) error {
 		return fmt.Errorf("failed to create log dir: %w", err)
 	}
 
-	logPath := filepath.Join(logDir, fmt.Sprintf("networktools-%s.log", time.Now().Format("2006-01")))
+	logPath := filepath.Join(logDir, fmt.Sprintf("nettools-%s.log", time.Now().Format("2006-01")))
 	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		return fmt.Errorf("failed to open log file: %w", err)

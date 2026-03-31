@@ -3,7 +3,7 @@ package topology
 import (
 	"testing"
 
-	"networktools/internal/db/models"
+	"nettools/internal/db/models"
 )
 
 func TestGetRenderHintPoE(t *testing.T) {

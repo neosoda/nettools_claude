@@ -6,6 +6,7 @@ import {
   Terminal, CalendarClock, GitGraph, ScrollText, Settings, Activity, Square, KeyRound, Package
 } from 'lucide-react'
 import { cn } from './lib/utils'
+import logo from './assets/images/logo.png'
 import { EventsOn } from '../wailsjs/runtime/runtime'
 import { CredentialProvider, useGlobalCredential } from './context/CredentialContext'
 import { ToastProvider } from './components/Toast'
@@ -83,7 +84,7 @@ function WindowTitleSync() {
 
   useEffect(() => {
     const current = navItems.find(item => item.to === location.pathname)
-    const title = current ? `NetworkTools — ${current.label}` : 'NetworkTools'
+    const title = current ? `NetTools — ${current.label}` : 'NetTools'
     void backend.WindowSetTitle?.(title)
   }, [location.pathname])
 
@@ -115,11 +116,9 @@ function AppContent() {
           
           {/* Logo / Header */}
           <div className="flex items-center gap-3 px-5 h-16 border-b border-white/[0.04] shrink-0">
-            <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
-              <Activity className={cn('w-4 h-4 text-white', hasRunningTask ? 'animate-pulse' : '')} strokeWidth={2.5} />
-            </div>
+            <img src={logo} alt="NetTools Logo" className="w-8 h-8 object-contain" />
             <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 text-sm tracking-wide">
-              NetworkTools
+              NetTools
             </span>
           </div>
 

@@ -18,7 +18,7 @@ func main() {
 	app := NewApp()
 
 	err := wails.Run(&options.App{
-		Title:            "NetworkTools",
+		Title:            "NetTools",
 		Width:            1400,
 		Height:           900,
 		MinWidth:         1024,

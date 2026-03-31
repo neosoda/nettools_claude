@@ -1,7 +1,7 @@
 package audit
 
 import (
-	"networktools/internal/db/models"
+	"nettools/internal/db/models"
 	"strings"
 	"testing"
 )

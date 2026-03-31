@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"networktools/internal/db"
-	"networktools/internal/db/models"
-	"networktools/internal/logger"
+	"nettools/internal/db"
+	"nettools/internal/db/models"
+	"nettools/internal/logger"
 
 	"github.com/google/uuid"
 )

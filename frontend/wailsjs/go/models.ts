@@ -807,7 +807,7 @@ export namespace topology {
 	    source: string;
 	    target: string;
 	    label: string;
-	    link_type: string;  // "trunk"|"access"|"unknown"|"subnet"
+	    link_type: string;
 	    local_port: string;
 	    remote_port: string;
 	

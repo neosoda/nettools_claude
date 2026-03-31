@@ -1,4 +1,4 @@
-# NetworkTools
+# NetTools
 
 Application desktop de gestion réseau pour administrateurs, construite avec **Wails v2 + Go + React + SQLite**.
 
@@ -118,7 +118,7 @@ Stratégie **exec-first / interactive-fallback** : le moteur tente d'abord le ca
 ## Architecture
 
 ```
-networktools/
+nettools/
 ├── app.go                    # API principale (méthodes Wails)
 ├── main.go                   # Point d'entrée
 ├── internal/
@@ -136,17 +136,20 @@ networktools/
 ├── frontend/
 │   └── src/pages/            # Pages React
 └── build/bin/
-    └── Nettools_claude.exe   # Binaire Windows
+    └── NetTools.exe          # Binaire Windows
+├── frontend/src/assets/images/
+│   ├── logo.png              # Logo de l'application
+│   └── icon.png              # Icône de l'application
 ```
 
 ---
 
 ## Données
 
-Stockées dans `%APPDATA%\NetworkTools\` :
-- `networktools.db` — base SQLite
+Stockées dans `%APPDATA%\NetTools\` :
+- `nettools.db` — base SQLite
 - `backups/` — fichiers de configuration
-- `logs/networktools-YYYY-MM.log` — journaux mensuels
+- `logs/nettools-YYYY-MM.log` — journaux mensuels
 - `settings.json` — préférences utilisateur
 
 ---
@@ -161,7 +164,7 @@ wails dev
 wails build
 ```
 
-Binaire produit : `build/bin/Nettools_claude.exe`
+Binaire produit : `build/bin/NetTools.exe`
 
 ---
 

@@ -6,8 +6,8 @@ import (
 	"sort"
 	"strings"
 
-	"networktools/internal/db"
-	"networktools/internal/db/models"
+	"nettools/internal/db"
+	"nettools/internal/db/models"
 )
 
 // Node represents a device in the topology graph
