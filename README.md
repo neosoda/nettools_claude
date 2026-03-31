@@ -196,7 +196,7 @@
 
 ### [⬇️ Télécharger NetTools v1.3.0](../../releases/download/v1.3.0/NetTools.exe)
 
-**Windows 10/11 • 64-bit • ~80 MB**
+**Windows 10/11 • 64-bit • ~20 MB**
 
 </div>
 
