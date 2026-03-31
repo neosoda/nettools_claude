@@ -194,30 +194,30 @@ export default function DiffPage() {
               Backups
             </button>
           </div>
-          <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer hover:text-slate-200 transition-colors">
+          <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer hover:text-slate-200 transition-colors" title="Ignorer les différences entre majuscules et minuscules (ex: CONFIG = config)">
             <input type="checkbox" className="w-3 h-3 accent-blue-500" checked={ignoreCase}
               onChange={e => setIgnoreCase(e.target.checked)} />
             Ignorer casse
           </label>
-          <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer hover:text-slate-200 transition-colors">
+          <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer hover:text-slate-200 transition-colors" title="Ignorer les différences d'espacements et d'indentations">
             <input type="checkbox" className="w-3 h-3 accent-blue-500" checked={ignoreWhitespace}
               onChange={e => setIgnoreWhitespace(e.target.checked)} />
             Ignorer espaces
           </label>
-          <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer hover:text-slate-200 transition-colors">
+          <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer hover:text-slate-200 transition-colors" title="Ignorer les espaces à la fin des lignes">
             <input type="checkbox" className="w-3 h-3 accent-blue-500" checked={trimTrailing}
               onChange={e => setTrimTrailing(e.target.checked)} />
             Trim trailing
           </label>
           <div className="h-4 w-px bg-slate-700" />
-          <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer hover:text-slate-200 transition-colors">
+          <label className="flex items-center gap-1.5 text-slate-400 cursor-pointer hover:text-slate-200 transition-colors" title="Afficher uniquement les lignes modifiées">
             <input type="checkbox" className="w-3 h-3 accent-blue-500" checked={showOnlyChanges}
               onChange={e => setShowOnlyChanges(e.target.checked)} />
             Changements uniquement
           </label>
           <div className="flex-1" />
           <div className="relative group">
-            <button className="text-slate-500 hover:text-slate-300 transition-colors text-xs">
+            <button className="text-slate-500 hover:text-slate-300 transition-colors text-xs" title="Ignorer certaines lignes selon des motifs regex">
               Filtres regex...
             </button>
             <div className="absolute right-0 top-full mt-1 w-72 bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
