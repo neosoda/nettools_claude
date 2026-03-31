@@ -444,6 +444,10 @@ Les contributions sont bienvenues ! Pour contribuer :
 **Avant de contribuer**, consultez [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ---
+**🙏 Crédits**
+NetTools est l'évolution du script original decouverte2.4.py créé par Emmanuel. Merci pour cette base solide qui nous a inspiré ! 🙌
+
+---
 
 ## 📜 Licence & Dépendances
 
