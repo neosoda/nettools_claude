@@ -1,0 +1,13 @@
+build/bin/
+node_modules/
+frontend/dist/
+frontend/node_modules/
+*.db
+*.db-shm
+*.db-wal
+*.exe
+*.log
+.DS_Store
+build/ 
+OLD/ 
+*.md5 
